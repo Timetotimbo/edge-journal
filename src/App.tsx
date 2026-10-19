@@ -66,7 +66,8 @@ export default function App() {
               <button key={t.id} onClick={() => go(t.id)} className={`btn ${tab === t.id ? 'bg-line text-ink' : 'text-mute hover:text-ink'}`}><t.icon className="w-4 h-4" />{t.label}</button>
             ))}
           </nav>
-          <button onClick={() => void supabase.auth.signOut()} title="Sign out" className="ml-auto text-mute hover:text-ink"><LogOut className="w-4 h-4" /></button>
+          <span className="ml-auto text-[11px] text-mute">v{__APP_VERSION__}</span>
+          <button onClick={() => void supabase.auth.signOut()} title="Sign out" className="text-mute hover:text-ink"><LogOut className="w-4 h-4" /></button>
         </div>
       </header>
 

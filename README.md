@@ -7,4 +7,5 @@ trades live in the Social Bloom Supabase project (`tj_trades`, `tj_days`, bucket
 - Imports NinjaTrader 8 (Trades or Executions grid), Tradovate (Performance or Fills), Robinhood (account activity),
   thinkorswim (Account Statement) and Schwab (transactions) CSVs: `src/lib/parse.ts`. Executions become trades flat to
   flat per account and instrument: `src/lib/build.ts`. Futures point values: `src/lib/instruments.ts`.
-- `npm run dev` to work on it; `./deploy.sh` builds and publishes to Cloudflare Pages (project edge-journal).
+- `npm run dev` to work on it; `./deploy.sh` builds and publishes to Cloudflare Pages (project edge-journal), tags the deploy and pushes it to GitHub.
+- Versions: bump `version` in package.json, add a CHANGELOG.md entry, `git tag vX.Y.Z`, push, then deploy. The version shows in the top bar.
