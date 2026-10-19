@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 11 13 18; --card: 19 22 30; --line: 35 40 54; --ink: 238 240 245; --mute: 139 147 167;
+  --edge: 255 138 31; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: 245 246 248; --card: 255 255 255; --line: 227 230 236; --ink: 18 21 28; --mute: 93 101 119;
+    --edge: 232 114 12; --win: 22 163 74; --loss: 225 29 72;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: 245 246 248; --card: 255 255 255; --line: 227 230 236; --ink: 18 21 28; --mute: 93 101 119;
+  --edge: 232 114 12; --win: 22 163 74; --loss: 225 29 72;
+  color-scheme: light;
+}
+html, body { background: rgb(var(--bg)); color: rgb(var(--ink)); overflow-x: clip; }
+body { font-family: Inter, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+.card { @apply bg-card border border-line rounded-xl; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold transition disabled:opacity-50; }
+.btn-edge { @apply btn bg-edge text-black hover:brightness-110; }
+.btn-line { @apply btn border border-line hover:bg-line/50; }
+.field { @apply w-full rounded-lg border border-line bg-bg px-3 h-10 text-sm outline-none focus:border-edge; }
+.label { @apply block text-xs font-medium text-mute mb-1; }
+.chip { @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition; }
+.num { font-variant-numeric: tabular-nums; }

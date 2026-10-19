@@ -1,0 +1,29 @@
+// Dollars per 1.00 move in price, per contract. Options are 100 shares a contract.
+export const FUTURES: Record<string, { mult: number; name: string }> = {
+  ES: { mult: 50, name: 'E-mini S&P 500' }, MES: { mult: 5, name: 'Micro S&P 500' },
+  NQ: { mult: 20, name: 'E-mini Nasdaq-100' }, MNQ: { mult: 2, name: 'Micro Nasdaq-100' },
+  YM: { mult: 5, name: 'E-mini Dow' }, MYM: { mult: 0.5, name: 'Micro Dow' },
+  RTY: { mult: 50, name: 'E-mini Russell 2000' }, M2K: { mult: 5, name: 'Micro Russell 2000' },
+  EMD: { mult: 100, name: 'E-mini MidCap' }, NKD: { mult: 5, name: 'Nikkei' },
+  CL: { mult: 1000, name: 'Crude Oil' }, MCL: { mult: 100, name: 'Micro Crude' }, QM: { mult: 500, name: 'E-mini Crude' },
+  NG: { mult: 10000, name: 'Natural Gas' }, QG: { mult: 2500, name: 'E-mini Natural Gas' },
+  GC: { mult: 100, name: 'Gold' }, MGC: { mult: 10, name: 'Micro Gold' },
+  SI: { mult: 5000, name: 'Silver' }, SIL: { mult: 1000, name: 'Micro Silver' }, HG: { mult: 25000, name: 'Copper' },
+  '6E': { mult: 125000, name: 'Euro FX' }, M6E: { mult: 12500, name: 'Micro Euro' }, '6B': { mult: 62500, name: 'British Pound' },
+  '6J': { mult: 12500000, name: 'Japanese Yen' }, '6A': { mult: 100000, name: 'Australian Dollar' }, '6C': { mult: 100000, name: 'Canadian Dollar' },
+  ZB: { mult: 1000, name: '30-Year Bond' }, UB: { mult: 1000, name: 'Ultra Bond' }, ZN: { mult: 1000, name: '10-Year Note' },
+  ZF: { mult: 1000, name: '5-Year Note' }, ZT: { mult: 2000, name: '2-Year Note' },
+  ZC: { mult: 50, name: 'Corn' }, ZS: { mult: 50, name: 'Soybeans' }, ZW: { mult: 50, name: 'Wheat' },
+  BTC: { mult: 5, name: 'Bitcoin' }, MBT: { mult: 0.1, name: 'Micro Bitcoin' }, ETH: { mult: 50, name: 'Ether' }, MET: { mult: 0.1, name: 'Micro Ether' },
+};
+
+/** "NQ 12-26" (NinjaTrader), "NQZ6" (Tradovate), "/NQZ26" or "/NQZ26:XCME" (thinkorswim) -> "NQ" */
+export function futuresRoot(symbol: string): string {
+  const s = symbol.trim().toUpperCase().replace(/^\//, '').split(/[:\s]/)[0];
+  if (FUTURES[s]) return s;
+  const m = s.match(/^([A-Z0-9]+?)[FGHJKMNQUVXZ]\d{1,2}$/);
+  return m ? m[1] : s;
+}
+
+export const isFuture = (symbol: string) => !!FUTURES[futuresRoot(symbol)];
+export const futuresMult = (root: string) => FUTURES[root]?.mult;
