@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.4.0 — 2026-10-22
+- Account sizes: the accounts table shows each account's size (50K, 300K…), guessed from the most contracts traded on it (Apex: up to 10 = 50K, 25 = 150K, 35 = 300K) until you set the real one with a tap. Saved to your account (new table tj_accounts).
+- Filter the accounts table by size, and see each account's high as a % of its size.
+
 ## 1.3.1 — 2026-10-22
 - "Highest / lowest P&L" card with the running total's high and low (and across all accounts when one is picked).
 - The accounts high/low table moved up, right under the stat cards.

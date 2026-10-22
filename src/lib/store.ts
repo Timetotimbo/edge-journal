@@ -7,6 +7,8 @@ import { markCopies } from './copies';
 export function useJournal(userId: string | undefined) {
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [days, setDays] = useState<Record<string, Day>>({});
+  // Sizes the user set on their accounts (50K, 300K…)
+  const [sizes, setSizes] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -23,6 +25,8 @@ export function useJournal(userId: string | undefined) {
     setTrades(all);
     const { data: d } = await supabase.from('tj_days').select('day, plan, review, mood');
     setDays(Object.fromEntries((d || []).map((x: Day) => [x.day, x])));
+    const { data: a } = await supabase.from('tj_accounts').select('account, size');
+    setSizes(Object.fromEntries((a || []).filter((x: { size: number | null }) => x.size).map((x: { account: string; size: number }) => [x.account, Number(x.size)])));
   }, [userId]);
   useEffect(() => { void load(); }, [load]);
 
@@ -54,6 +58,12 @@ export function useJournal(userId: string | undefined) {
     if (error) throw new Error(error.message);
   };
 
-  return { trades, days, error, reload: load, saveTrade, deleteTrades, addTrades, saveDay };
+  const saveSize = async (account: string, size: number | null) => {
+    setSizes(s => { const n = { ...s }; if (size) n[account] = size; else delete n[account]; return n; });
+    const { error } = await supabase.from('tj_accounts').upsert({ account, size, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+  };
+
+  return { trades, days, sizes, error, reload: load, saveTrade, deleteTrades, addTrades, saveDay, saveSize };
 }
 export type Journal = ReturnType<typeof useJournal>;

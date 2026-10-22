@@ -105,7 +105,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, perAccount, everyAccount, all, onDay, onTrade, onImport }: { trades: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
   const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
   // With one account picked, each card also shows the same number across all accounts
@@ -161,7 +161,7 @@ export default function Dashboard({ trades, perAccount, everyAccount, all, onDay
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
 
-      <AccountRange trades={perAccount} />
+      <AccountRange trades={perAccount} sizes={accountSizes} onSize={onSize} />
 
       <section className="card p-4">
         <h3 className="font-semibold mb-2">Equity curve</h3>
