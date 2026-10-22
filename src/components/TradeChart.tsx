@@ -34,6 +34,22 @@ function load(k: string) {
 const local = (s: number) => (s - new Date(s * 1000).getTimezoneOffset() * 60) as UTCTimestamp;
 const css = (v: string, a = 1) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim().replace(/ /g, ',')}${a < 1 ? `,${a}` : ''})`.replace('rgb(', a < 1 ? 'rgba(' : 'rgb(');
 
+// The trade's orders (fills in the same second and direction), named for what each did: Buy/Sell to open, Add, Exit
+function orders(t: Trade) {
+  const out = new Map<string, { at: string; buy: boolean; qty: number; px: number; what: string }>();
+  let pos = 0;
+  for (const f of t.fills || []) {
+    const buy = f.qty > 0, k = `${f.at.slice(0, 19)}|${buy}`;
+    const what = pos === 0 ? (buy ? 'Buy' : 'Sell') : Math.sign(pos) === Math.sign(f.qty) ? 'Add' : 'Exit';
+    pos += f.qty;
+    const o = out.get(k) || out.set(k, { at: f.at, buy, qty: 0, px: 0, what }).get(k)!;
+    o.px = (o.px * o.qty + f.price * Math.abs(f.qty)) / (o.qty + Math.abs(f.qty));
+    o.qty += Math.abs(f.qty);
+  }
+  return [...out.values()];
+}
+const hms = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+
 export default function TradeChart({ t }: { t: Trade }) {
   const box = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState(1);
@@ -79,21 +95,14 @@ export default function TradeChart({ t }: { t: Trade }) {
         crosshair: { mode: CrosshairMode.Normal },
       });
       const s = chart.addCandlestickSeries({ upColor: win, downColor: loss, wickUpColor: win, wickDownColor: loss, borderVisible: false,
-        priceFormat: { type: 'price', minMove: tick0 || 0.01, precision: Math.max(0, -Math.floor(Math.log10(tick0 || 0.01))) } });
+        priceFormat: { type: 'price', minMove: tick0 || 0.01, precision: (String(tick0 || 0.01).split('.')[1] || '').length } });
       s.setData(bars.map(([ts, o, h, l, c]) => ({ time: at(ts), open: o, high: h, low: l, close: c })));
-      // One marker per bar and side: "Buy 2 @ 15595"
-      const marks = new Map<string, { time: number; buy: boolean; qty: number; px: number }>();
-      for (const f of t.fills || []) {
-        const ts = bucket(Math.floor(new Date(f.at).getTime() / 1000), sec), buy = f.qty > 0, k = `${ts}|${buy}`;
-        const m = marks.get(k) || marks.set(k, { time: ts, buy, qty: 0, px: 0 }).get(k)!;
-        m.px = (m.px * m.qty + f.price * Math.abs(f.qty)) / (m.qty + Math.abs(f.qty));
-        m.qty += Math.abs(f.qty);
-      }
-      s.setMarkers([...marks.values()].sort((a, b) => a.time - b.time).map(m => ({
+      const marks = orders(t).map(o => ({ ...o, time: bucket(Math.floor(new Date(o.at).getTime() / 1000), sec) }));
+      s.setMarkers(marks.sort((a, b) => a.time - b.time).map(m => ({
         time: at(m.time), position: m.buy ? 'belowBar' : 'aboveBar', color: m.buy ? win : loss, shape: m.buy ? 'arrowUp' : 'arrowDown',
-        text: `${m.buy ? 'Buy' : 'Sell'} ${+m.qty.toFixed(4)} @ ${price(+m.px.toFixed(6))}`,
+        text: m.what,
       }) as SeriesMarker<UTCTimestamp>));
-      s.createPriceLine({ price: Number(t.entry_price), color: edge, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'Entry' });
+      s.createPriceLine({ price: Number(t.entry_price), color: edge, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: (t.fills || []).filter(f => Math.sign(f.qty) === Math.sign(t.fills![0].qty)).length > 1 ? 'Avg entry' : 'Entry' });
       if (t.exit_price !== null) s.createPriceLine({ price: Number(t.exit_price), color: Number(t.net_pnl) >= 0 ? win : loss, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'Exit' });
       // Start zoomed on the trade, with some room either side
       const from = new Date(t.entry_at).getTime() / 1000, to = new Date(t.exit_at || t.entry_at).getTime() / 1000;
@@ -116,6 +125,11 @@ export default function TradeChart({ t }: { t: Trade }) {
         </div>
       </div>
       <div ref={box} className="card h-72 md:h-80 overflow-hidden">{state === 'loading' && <div className="h-full grid place-items-center text-xs text-mute">Loading chart…</div>}</div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] num">
+        {orders(t).map(o => (
+          <span key={`${o.at}${o.buy}`}><b className={o.buy ? 'text-win' : 'text-loss'}>{o.what} {+o.qty.toFixed(4)}</b> @ {price(+o.px.toFixed(6))} <span className="text-mute">{hms(o.at)}</span></span>
+        ))}
+      </div>
     </div>
   );
 }

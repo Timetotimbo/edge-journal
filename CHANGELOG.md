@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.7.1 — 2026-10-22
+- Trade charts mark each order on its own (Buy, Add, Exit) instead of merging orders in the same bar into one averaged arrow, and list every order's size, price and time under the chart. The entry line says "Avg entry" when you added. Prices show to the quarter point (21,237.75 was showing as 21,237.5).
+
 ## 1.7.0 — 2026-10-22
 - Zoomed-out trade charts: 1h, 4h and daily buttons beside 1m/5m/15m show the days and weeks around a trade, from hourly bars for the trade's month and the months either side (tools/export_hourly.py makes them from NinjaTrader's minute history, following the most-traded contract each day).
 
