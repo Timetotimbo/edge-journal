@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
 import { applyFilters, COPIES, RANGES, type Filters } from './lib/filters';
 import { accountKind, KINDS } from './lib/accounts';
+import { ADD_KINDS } from './lib/adds';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Trades from './pages/Trades';
@@ -113,6 +114,10 @@ export default function App() {
             <select className="field !w-auto !h-9" value={filters.side} onChange={e => setFilters({ ...filters, side: e.target.value })}>
               <option value="">Long & short</option><option value="long">Long</option><option value="short">Short</option>
             </select>
+            <select className="field !w-auto !h-9" value={filters.adds || ''} onChange={e => setFilters({ ...filters, adds: e.target.value })}>
+              <option value="">Adds: any or none</option><option value="any">Trades I added to</option>
+              {ADD_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
             {j.trades?.some(t => (t.copies || 1) > 1) && (
               <select className="field !w-auto !h-9" value={filters.copies || ''} onChange={e => setFilters({ ...filters, copies: e.target.value })}>
                 {COPIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -121,7 +126,7 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}

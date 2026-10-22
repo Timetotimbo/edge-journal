@@ -57,6 +57,13 @@ export type Trade = {
   copies?: number;
   lead?: boolean;
   copyGroup?: number;
+  /** Worked out when loaded (lib/adds.ts): adds in the trade's direction, while red / green, and the most it was down when adding */
+  adds?: number;
+  addRed?: number;
+  addGreen?: number;
+  heat?: number;
+  addPnlRed?: number;
+  addPnlGreen?: number;
 };
 
 export type NewTrade = Omit<Trade, 'id'>;

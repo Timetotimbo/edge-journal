@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.6.0 — 2026-10-22
+- Adding to positions: each trade's adds are checked against the average entry at that moment, so the journal knows when you averaged down (added while losing) and when you added to a winner that then turned into a loss. A report shows how each kind of trade did, what just the added contracts made or lost, how many of the biggest losses came from averaging down, and a month-by-month view of the habit.
+- New "Adds" filter (tap a row in the report to see those trades), and a warning on each trade where you averaged down or added to a winner that turned.
+
 ## 1.5.2 — 2026-10-22
 - Trading days follow the futures session: 5 pm Central the evening before to the 4 pm close, so Sunday night counts as Monday and weekends never count. Used everywhere days are counted (calendar, days traded, daily stats, the journal).
 - The accounts table shows each account's number of trading days, and can sort by it.

@@ -93,6 +93,14 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
 
         <div className="p-4 space-y-5">
           {err && <p className="text-sm text-loss">{err}</p>}
+          {!!t.addRed && (
+            <p className="rounded-lg border border-loss/40 bg-loss/10 px-3 py-2 text-sm">
+              <b className="text-loss">Averaged down:</b> added {t.addRed}× while losing (down {money(t.heat || 0)} when you added). The added contracts {(t.addPnlRed || 0) < 0 ? 'lost' : 'made'} {money(Math.abs(t.addPnlRed || 0))}.
+            </p>
+          )}
+          {!t.addRed && !!t.addGreen && t.net_pnl < 0 && (
+            <p className="rounded-lg border border-loss/40 bg-loss/10 px-3 py-2 text-sm"><b className="text-loss">Added to a winner, then it turned:</b> added {t.addGreen}× while green and the trade ended {money(Number(t.net_pnl), true)}.</p>
+          )}
           <div className="grid grid-cols-3 gap-2 text-sm">
             {[
               ['Entry', price(t.entry_price)], ['Exit', price(t.exit_price)], [t.asset === 'future' ? 'Points' : 'Per share', pts === null ? '–' : `${pts >= 0 ? '+' : ''}${price(pts)}`],

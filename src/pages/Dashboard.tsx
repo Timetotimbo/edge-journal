@@ -7,6 +7,7 @@ import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
 import AccountRange from '../components/AccountRange';
 import KindCompare from '../components/KindCompare';
+import AddsReport from '../components/AddsReport';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const mins = (m: number | null) => (m === null ? '–' : m < 1 ? `${Math.round(m * 60)}s` : m < 60 ? `${m < 10 ? m.toFixed(1) : Math.round(m)}m` : `${(m / 60).toFixed(1)}h`);
@@ -110,7 +111,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, everyKind, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; everyKind: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, onAdds, everyKind, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; onAdds: (k: string) => void; everyKind: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
   const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
   // With one account picked, each card also shows the same number across all accounts
@@ -167,6 +168,8 @@ export default function Dashboard({ trades, everyKind, perAccount, everyAccount,
         <Stat all={x(v => `${money(v.avgDay, true)} · ${v.winDays + v.lossDays + v.flatDays} days`)} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.winDays + s.lossDays + s.flatDays} days traded · ${s.tradesPerDay.toFixed(1)} trades a day`} />
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
+
+      <AddsReport trades={trades} onPick={onAdds} />
 
       <KindCompare trades={everyKind} />
 
