@@ -46,6 +46,8 @@ export default function App() {
   const [focusDay, setFocusDay] = useState<string | null>(null);
 
   const shown = useMemo(() => applyFilters(j.trades || [], filters), [j.trades, filters]);
+  // The same filters across every account, to compare one account with the rest
+  const everyAccount = useMemo(() => (filters.account ? applyFilters(j.trades || [], { ...filters, account: '' }) : null), [j.trades, filters]);
   // Opening with nothing to show (old trades, a filter left on an account with no trades): show all time instead
   const checked = useRef(false);
   useEffect(() => {
@@ -107,7 +109,7 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}

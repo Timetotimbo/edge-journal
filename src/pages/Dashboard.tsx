@@ -48,12 +48,13 @@ function Table({ title, note, groups, order }: { title: string; note?: string; g
   );
 }
 
-function Stat({ label, value, sub, cls = '' }: { label: string; value: string; sub?: string; cls?: string }) {
+function Stat({ label, value, sub, cls = '', all }: { label: string; value: string; sub?: string; cls?: string; all?: string }) {
   return (
     <div className="card p-3">
       <div className="text-xs text-mute">{label}</div>
       <div className={`num text-xl font-bold mt-0.5 ${cls}`}>{value}</div>
       {sub && <div className="text-xs text-mute mt-0.5">{sub}</div>}
+      {all !== undefined && <div className="text-xs mt-1 pt-1 border-t border-line text-mute">All accounts: <span className="num font-semibold text-ink">{all}</span></div>}
     </div>
   );
 }
@@ -103,8 +104,11 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, all, onDay, onTrade, onImport }: { trades: Trade[]; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, everyAccount, all, onDay, onTrade, onImport }: { trades: Trade[]; everyAccount: Trade[] | null; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
+  const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
+  // With one account picked, each card also shows the same number across all accounts
+  const x = (f: (v: typeof s) => string) => (a ? f(a) : undefined);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const weekday = useMemo(() => {
     const g = Object.fromEntries(byKey(trades, t => String(new Date(t.entry_at).getDay())).map(x => [x.key, x.net]));
@@ -141,18 +145,18 @@ export default function Dashboard({ trades, all, onDay, onTrade, onImport }: { t
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Net P&L" value={money(s.net, true)} cls={pnlClass(s.net)} sub={`${s.count} trades · fees ${money(s.fees)}`} />
-        <Stat label="Win rate" value={pct(s.winRate)} sub={`${s.wins} W · ${s.losses} L · days ${s.winDays}/${s.winDays + s.lossDays}`} />
-        <Stat label="Profit factor" value={s.profitFactor === Infinity ? '∞' : s.profitFactor.toFixed(2)} sub={`Avg trade ${money(s.expectancy, true)}`} />
-        <Stat label="Avg win / loss" value={s.avgLoss ? (s.avgWin / Math.abs(s.avgLoss)).toFixed(2) : '–'} sub={`${money(s.avgWin)} / ${money(s.avgLoss)}`} />
-        <Stat label="Best trade" value={money(s.best, true)} cls="text-win" />
-        <Stat label="Worst trade" value={money(s.worst, true)} cls="text-loss" />
-        <Stat label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
-        <Stat label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
-        <Stat label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
-        <Stat label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />
-        <Stat label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.tradesPerDay.toFixed(1)} trades a day`} />
-        <Stat label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
+        <Stat all={x(v => money(v.net, true))} label="Net P&L" value={money(s.net, true)} cls={pnlClass(s.net)} sub={`${s.count} trades · fees ${money(s.fees)}`} />
+        <Stat all={x(v => pct(v.winRate))} label="Win rate" value={pct(s.winRate)} sub={`${s.wins} W · ${s.losses} L · days ${s.winDays}/${s.winDays + s.lossDays}`} />
+        <Stat all={x(v => pf(v.profitFactor))} label="Profit factor" value={s.profitFactor === Infinity ? '∞' : s.profitFactor.toFixed(2)} sub={`Avg trade ${money(s.expectancy, true)}`} />
+        <Stat all={x(v => `${money(v.avgWin)} / ${money(v.avgLoss)}`)} label="Avg win / loss" value={s.avgLoss ? (s.avgWin / Math.abs(s.avgLoss)).toFixed(2) : '–'} sub={`${money(s.avgWin)} / ${money(s.avgLoss)}`} />
+        <Stat all={x(v => money(v.best, true))} label="Best trade" value={money(s.best, true)} cls="text-win" />
+        <Stat all={x(v => money(v.worst, true))} label="Worst trade" value={money(s.worst, true)} cls="text-loss" />
+        <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
+        <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
+        <Stat all={x(v => `${size(v.avgQtyWin)} W · ${size(v.avgQtyLoss)} L`)} label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
+        <Stat all={x(v => `${v.winStreak} W · ${v.lossStreak} L`)} label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />
+        <Stat all={x(v => money(v.avgDay, true))} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.tradesPerDay.toFixed(1)} trades a day`} />
+        <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
 
       <section className="card p-4">

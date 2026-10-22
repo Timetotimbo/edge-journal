@@ -22,5 +22,6 @@ export function applyFilters(trades: Trade[], f: Filters) {
     (!f.account || (t.account || t.broker) === f.account) &&
     (!f.asset || t.asset === f.asset) &&
     (!f.side || t.side === f.side) &&
-    (!f.copies || (f.copies === 'once' ? t.lead !== false : f.copies === 'copied' ? (t.copies || 1) > 1 : (t.copies || 1) === 1)));
+    // One account: all of its own trades ("once" picks one copy per group, which may be on another account)
+    (!f.copies || (f.copies === 'once' ? !!f.account || t.lead !== false : f.copies === 'copied' ? (t.copies || 1) > 1 : (t.copies || 1) === 1)));
 }

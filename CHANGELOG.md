@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.2.1 — 2026-10-22
+- With one account picked, every stat card also shows the same number across all accounts.
+- Fix: with one account picked, "Count copies once" no longer hides that account's own copied trades.
+
 ## 1.2.0 — 2026-10-22
 - Copy trades: trades taken on several accounts with a trade copier (same instrument and direction, opened within 2 seconds) are found automatically. A new filter shows all trades, counts each copied trade once (the default), or shows only copied or only single trades. Copied trades are labeled "copied ×N". Nothing is deleted.
 - More stats: average size (winners vs losers), average hold (winners vs losers), longest win and loss streaks, average day and trades per day, expectancy.
