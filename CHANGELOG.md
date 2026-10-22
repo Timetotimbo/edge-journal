@@ -2,6 +2,11 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.5.0 — 2026-10-22
+- Account types: funded (Apex PA, Bulenox BX-M), evaluation (Apex, Bulenox) and sim. New filter for the type.
+- "Funded vs evaluation vs sim": the same numbers side by side (size, hold, win rate, average win and loss, profit factor, trades and days, best and worst half hour…) and the biggest differences in plain words. Copies counted once within each type.
+- The Avg day card shows how many days were traded.
+
 ## 1.4.0 — 2026-10-22
 - Account sizes: the accounts table shows each account's size (50K, 300K…), guessed from the most contracts traded on it (Apex: up to 10 = 50K, 25 = 150K, 35 = 300K) until you set the real one with a tap. Saved to your account (new table tj_accounts).
 - Filter the accounts table by size, and see each account's high as a % of its size.

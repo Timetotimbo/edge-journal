@@ -4,6 +4,7 @@ import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
 import { applyFilters, COPIES, RANGES, type Filters } from './lib/filters';
+import { accountKind, KINDS } from './lib/accounts';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Trades from './pages/Trades';
@@ -49,6 +50,9 @@ export default function App() {
   // The same filters across every account, to compare one account with the rest
   // Every trade on each account (copies too), for each account's own running P&L
   const perAccount = useMemo(() => applyFilters(j.trades || [], { ...filters, copies: '' }), [j.trades, filters]);
+  // Every account type, to compare funded with evaluation and sim trading
+  const everyKind = useMemo(() => applyFilters(j.trades || [], { ...filters, account: '', kind: '', copies: '' }), [j.trades, filters]);
+  const kindsPresent = useMemo(() => KINDS.filter(([k]) => (j.trades || []).some(t => accountKind(t.account) === k)), [j.trades]);
   const everyAccount = useMemo(() => (filters.account ? applyFilters(j.trades || [], { ...filters, account: '' }) : null), [j.trades, filters]);
   // Opening with nothing to show (old trades, a filter left on an account with no trades): show all time instead
   const checked = useRef(false);
@@ -91,10 +95,16 @@ export default function App() {
             <select className="field !w-auto !h-9" value={filters.range} onChange={e => setFilters({ ...filters, range: e.target.value })}>
               {RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
+            {kindsPresent.length > 1 && (
+              <select className="field !w-auto !h-9" value={filters.kind || ''} onChange={e => setFilters({ ...filters, kind: e.target.value, account: '' })}>
+                <option value="">All account types</option>
+                {kindsPresent.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            )}
             {accounts.length > 1 && (
               <select className="field !w-auto !h-9" value={filters.account} onChange={e => setFilters({ ...filters, account: e.target.value })}>
                 <option value="">All accounts</option>
-                {accounts.map(a => <option key={a} value={a}>{a}</option>)}
+                {accounts.filter(a => !filters.kind || accountKind(a) === filters.kind).map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             )}
             <select className="field !w-auto !h-9" value={filters.asset} onChange={e => setFilters({ ...filters, asset: e.target.value })}>
@@ -111,7 +121,7 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}

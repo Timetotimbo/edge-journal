@@ -5,6 +5,7 @@ import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
 import AccountRange from '../components/AccountRange';
+import KindCompare from '../components/KindCompare';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const mins = (m: number | null) => (m === null ? '–' : m < 1 ? `${Math.round(m * 60)}s` : m < 60 ? `${m < 10 ? m.toFixed(1) : Math.round(m)}m` : `${(m / 60).toFixed(1)}h`);
@@ -105,7 +106,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, everyKind, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; everyKind: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
   const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
   // With one account picked, each card also shows the same number across all accounts
@@ -157,9 +158,11 @@ export default function Dashboard({ trades, perAccount, everyAccount, accountSiz
         <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
         <Stat all={x(v => `${size(v.avgQtyWin)} W · ${size(v.avgQtyLoss)} L`)} label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
         <Stat all={x(v => `${v.winStreak} W · ${v.lossStreak} L`)} label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />
-        <Stat all={x(v => money(v.avgDay, true))} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.tradesPerDay.toFixed(1)} trades a day`} />
+        <Stat all={x(v => `${money(v.avgDay, true)} · ${v.winDays + v.lossDays + v.flatDays} days`)} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.winDays + s.lossDays + s.flatDays} days traded · ${s.tradesPerDay.toFixed(1)} trades a day`} />
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
+
+      <KindCompare trades={everyKind} />
 
       <AccountRange trades={perAccount} sizes={accountSizes} onSize={onSize} />
 

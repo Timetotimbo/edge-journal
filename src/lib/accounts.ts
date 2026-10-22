@@ -30,3 +30,14 @@ export function estimateSize(account: string, trades: Trade[]): number | null {
   const fit = LIMITS[firm].find(([, n]) => most <= n + 1e-9);
   return fit ? fit[0] : LIMITS[firm][LIMITS[firm].length - 1][0];
 }
+
+/** Funded (Apex PA-, Bulenox BX-M…), evaluation (Apex APEX-, Bulenox BX…), sim (Sim…, Playback) or other */
+export type AccountKind = 'funded' | 'eval' | 'sim' | 'other';
+export const KINDS: [AccountKind, string][] = [['funded', 'Funded (PA / Bulenox M)'], ['eval', 'Evaluation'], ['sim', 'Sim'], ['other', 'Other']];
+export function accountKind(account: string | null): AccountKind {
+  const a = (account || '').toUpperCase();
+  if (/^PA-APEX/.test(a) || /^BX-M/.test(a)) return 'funded';
+  if (/^APEX-/.test(a) || /^BX\d/.test(a)) return 'eval';
+  if (/^SIM|PLAYBACK|BACKTEST/.test(a)) return 'sim';
+  return 'other';
+}

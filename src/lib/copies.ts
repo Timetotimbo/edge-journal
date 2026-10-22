@@ -20,5 +20,5 @@ export function markCopies(trades: Trade[]) {
     open.set(k, fresh);
     groups.push(fresh.members);
   }
-  for (const g of groups) g.forEach((t, i) => { t.copies = g.length; t.lead = i === 0; });
+  groups.forEach((g, n) => g.forEach((t, i) => { t.copies = g.length; t.lead = i === 0; t.copyGroup = n; }));
 }

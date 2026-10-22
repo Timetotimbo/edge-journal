@@ -13,6 +13,7 @@ export type Summary = {
   winStreak: number; lossStreak: number; avgDay: number; tradesPerDay: number;
   /** Highest and lowest running P&L reached, trade by trade */
   high: number; low: number;
+  flatDays: number;
 };
 const holdMin = (t: Trade) => (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()) / 60000;
 const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
@@ -52,6 +53,7 @@ export function summarize(trades: Trade[]): Summary {
     winStreak, lossStreak, high: peak, low,
     winDays: days.filter(d => d.net > 0).length,
     lossDays: days.filter(d => d.net < 0).length,
+    flatDays: days.filter(d => d.net === 0).length,
     avgDay: days.length ? sum(trades) / days.length : 0,
     tradesPerDay: days.length ? trades.length / days.length : 0,
   };

@@ -56,6 +56,7 @@ export type Trade = {
   /** Worked out when loaded (lib/copies.ts), not stored: accounts that took this trade with a copier, and the one counted */
   copies?: number;
   lead?: boolean;
+  copyGroup?: number;
 };
 
 export type NewTrade = Omit<Trade, 'id'>;
