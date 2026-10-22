@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.3.0 — 2026-10-22
+- Accounts table: each account's highest and lowest running P&L (and the day it got there), final P&L, biggest drop from a high, trades and dates. Sort by any column.
+
 ## 1.2.1 — 2026-10-22
 - With one account picked, every stat card also shows the same number across all accounts.
 - Fix: with one account picked, "Count copies once" no longer hides that account's own copied trades.

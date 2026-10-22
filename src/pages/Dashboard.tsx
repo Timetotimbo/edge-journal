@@ -4,6 +4,7 @@ import type { Trade } from '../lib/types';
 import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type Group } from '../lib/stats';
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
+import AccountRange from '../components/AccountRange';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const mins = (m: number | null) => (m === null ? '–' : m < 1 ? `${Math.round(m * 60)}s` : m < 60 ? `${m < 10 ? m.toFixed(1) : Math.round(m)}m` : `${(m / 60).toFixed(1)}h`);
@@ -104,7 +105,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, everyAccount, all, onDay, onTrade, onImport }: { trades: Trade[]; everyAccount: Trade[] | null; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, perAccount, everyAccount, all, onDay, onTrade, onImport }: { trades: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
   const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
   // With one account picked, each card also shows the same number across all accounts
@@ -185,6 +186,8 @@ export default function Dashboard({ trades, everyAccount, all, onDay, onTrade, o
         <Bars title="By day of week" data={weekday} />
         <Bars title="By hour entered" data={hours} />
       </div>
+
+      <AccountRange trades={perAccount} />
 
       <Table title="Best time of day" note="When you entered, by half hour, in your time. ★ marks the best stretch (5+ trades)." groups={halfHours} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
