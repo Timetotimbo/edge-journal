@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.5.2 — 2026-10-22
+- Trading days follow the futures session: 5 pm Central the evening before to the 4 pm close, so Sunday night counts as Monday and weekends never count. Used everywhere days are counted (calendar, days traded, daily stats, the journal).
+- The accounts table shows each account's number of trading days, and can sort by it.
+
 ## 1.5.1 — 2026-10-22
 - Size is now dollars per tick (1 NQ = $5, 1 MNQ = $0.50), so NQ and MNQ compare fairly, plus contracts per instrument (NQ and MNQ apart) on winners and losers. The "By size" table groups by $ per tick, and a new "Contracts by instrument" table.
 - The funded vs evaluation comparison uses $ per tick and NQ / MNQ contract rows, and fits a phone.

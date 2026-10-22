@@ -5,7 +5,7 @@ import { estimateSize, sizeLabel, SIZES } from '../lib/accounts';
 
 // Each account's running P&L, trade by trade: the highest and lowest it reached, where it ended, and its worst drop from a high.
 // Uses every trade on each account (copies included), since each account had its own balance.
-type Row = { account: string; size: number; sizeSet: boolean; trades: number; from: string; to: string; net: number; high: number; highOn: string; low: number; lowOn: string; dd: number };
+type Row = { account: string; size: number; sizeSet: boolean; trades: number; days: number; from: string; to: string; net: number; high: number; highOn: string; low: number; lowOn: string; dd: number };
 const COLS: [keyof Row, string][] = [['size', 'Size'], ['high', 'High'], ['low', 'Low'], ['net', 'Final'], ['dd', 'Max DD'], ['trades', 'Trades']];
 const usd = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
 const short = (d: string) => new Date(`${d}T12:00`).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' });
@@ -30,7 +30,7 @@ export default function AccountRange({ trades, sizes, onSize }: { trades: Trade[
         dd = Math.min(dd, run - peak);
       }
       const est = estimateSize(account, ts);
-      return { account, size: sizes[account] || est || 0, sizeSet: !!sizes[account], trades: ts.length, from: dayOf(ts[0].entry_at), to: dayOf(ts[ts.length - 1].entry_at), net: run, high, highOn, low, lowOn, dd };
+      return { account, size: sizes[account] || est || 0, sizeSet: !!sizes[account], trades: ts.length, days: new Set(ts.flatMap(t => [dayOf(t.entry_at), dayOf(t.exit_at || t.entry_at)])).size, from: dayOf(ts[0].entry_at), to: dayOf(ts[ts.length - 1].entry_at), net: run, high, highOn, low, lowOn, dd };
     });
   }, [trades, sizes]);
   const sorted = useMemo(() => [...rows].filter(r => !only || r.size === only).sort((a, b) => ((a[sort] as number) - (b[sort] as number)) * (desc ? -1 : 1)), [rows, sort, desc, only]);
@@ -61,7 +61,7 @@ export default function AccountRange({ trades, sizes, onSize }: { trades: Trade[
         <table className="w-full text-xs sm:text-sm num">
           <thead>
             <tr className="text-[11px] text-mute text-right">
-              <th className="text-left font-medium px-1 py-1">Account</th>
+              <th className="text-left font-medium px-1 py-1">Account · <button onClick={() => pick('days')} className={sort === 'days' ? 'text-edge' : ''}>days{sort === 'days' ? (desc ? ' ↓' : ' ↑') : ''}</button></th>
               {COLS.map(([k, l]) => (
                 <th key={k} className="font-medium px-1"><button onClick={() => pick(k)} className={sort === k ? 'text-edge' : ''}>{l}{sort === k ? (desc ? ' ↓' : ' ↑') : ''}</button></th>
               ))}
@@ -70,7 +70,7 @@ export default function AccountRange({ trades, sizes, onSize }: { trades: Trade[
           <tbody>
             {shown.map(r => (
               <tr key={r.account} className="border-t border-line text-right align-top">
-                <td className="text-left px-1 py-1.5"><div className="font-medium whitespace-nowrap">{r.account.replace(/^(PA-)?APEX-\d+-/, (m, pa) => (pa ? 'PA ' : 'Apex '))}</div><div className="text-[10px] text-mute whitespace-nowrap">{short(r.from)}{r.to !== r.from ? `–${short(r.to)}` : ''}</div></td>
+                <td className="text-left px-1 py-1.5"><div className="font-medium whitespace-nowrap">{r.account.replace(/^(PA-)?APEX-\d+-/, (m, pa) => (pa ? 'PA ' : 'Apex '))}</div><div className="text-[10px] text-mute whitespace-nowrap">{short(r.from)}{r.to !== r.from ? `–${short(r.to)}` : ''}</div><div className="text-[10px] text-ink whitespace-nowrap">{r.days} trading day{r.days === 1 ? '' : 's'}</div></td>
                 <td className="px-1 py-1.5 whitespace-nowrap">
                   {editing === r.account ? (
                     <select autoFocus className="field !h-8 !w-auto !px-1 text-xs" value={r.sizeSet ? r.size : ''} onBlur={() => setEditing('')}

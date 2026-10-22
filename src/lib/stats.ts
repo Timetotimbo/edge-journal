@@ -1,10 +1,10 @@
 import type { Trade } from './types';
 import { tickDollars } from './instruments';
 
-export const dayOf = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+// Futures trading days: a session runs from 5 pm Central the evening before to the 4 pm close, so a trade on Sunday
+// night belongs to Monday and weekends are never a day. (Shift 7 hours, then take the Chicago date.)
+const chicago = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' });
+export const dayOf = (iso: string) => chicago.format(new Date(new Date(iso).getTime() + 7 * 3600e3));
 
 export type Summary = {
   count: number; wins: number; losses: number; net: number; gross: number; fees: number;
