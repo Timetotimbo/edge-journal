@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
 import { supabase } from './lib/supabase';
@@ -46,6 +46,15 @@ export default function App() {
   const [focusDay, setFocusDay] = useState<string | null>(null);
 
   const shown = useMemo(() => applyFilters(j.trades || [], filters), [j.trades, filters]);
+  // Opening with nothing to show (old trades, a filter left on an account with no trades): show all time instead
+  const checked = useRef(false);
+  useEffect(() => {
+    if (!j.trades?.length || checked.current) return;
+    checked.current = true;
+    if (shown.length) return;
+    const account = j.trades.some(t => (t.account || t.broker) === filters.account) ? filters.account : '';
+    setFilters({ ...filters, account, range: applyFilters(j.trades, { ...filters, account }).length ? filters.range : 'all' });
+  }, [j.trades]); // eslint-disable-line react-hooks/exhaustive-deps
   const accounts = useMemo(() => [...new Set((j.trades || []).map(t => t.account || t.broker))].sort(), [j.trades]);
 
   if (session === undefined) return null;

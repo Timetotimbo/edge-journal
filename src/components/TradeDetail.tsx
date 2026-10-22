@@ -5,6 +5,7 @@ import type { Journal } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { money, pnlClass } from '../lib/stats';
 import { price, when } from './TradeRow';
+import TradeChart from './TradeChart';
 
 // From the Trader's Mind Map: what was driving the trade
 export const EMOTIONS = ['Calm', 'Confident', 'Focused', 'Patient', 'FOMO', 'Fear', 'Greed', 'Revenge', 'Impatient', 'Frustrated', 'Bored', 'Overconfident'];
@@ -101,6 +102,8 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
               <div key={k} className="card px-3 py-2"><div className="text-[11px] text-mute">{k}</div><div className="num font-semibold">{v}</div></div>
             ))}
           </div>
+
+          <TradeChart t={t} />
 
           <div>
             <label className="label" htmlFor="setup">Setup</label>
