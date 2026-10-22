@@ -27,3 +27,14 @@ export function futuresRoot(symbol: string): string {
 
 export const isFuture = (symbol: string) => !!FUTURES[futuresRoot(symbol)];
 export const futuresMult = (root: string) => FUTURES[root]?.mult;
+
+// Smallest price move per instrument (futures); options and stocks move in cents
+const TICKS: Record<string, number> = {
+  ES: 0.25, MES: 0.25, NQ: 0.25, MNQ: 0.25, YM: 1, MYM: 1, RTY: 0.1, M2K: 0.1, EMD: 0.1, NKD: 5,
+  CL: 0.01, MCL: 0.01, QM: 0.025, NG: 0.001, QG: 0.005, GC: 0.1, MGC: 0.1, SI: 0.005, SIL: 0.005, HG: 0.0005,
+  '6E': 0.00005, M6E: 0.0001, '6B': 0.0001, '6J': 0.0000005, '6A': 0.00005, '6C': 0.00005,
+  ZB: 1 / 32, UB: 1 / 32, ZN: 1 / 64, ZF: 1 / 128, ZT: 1 / 256, ZC: 0.25, ZS: 0.25, ZW: 0.25, BTC: 5, MBT: 5, ETH: 0.5, MET: 0.5,
+};
+/** Dollars per tick for the whole position: 1 NQ = $5, 1 MNQ = $0.50, 1 ES = $12.50 */
+export const tickDollars = (t: { root: string; asset: string; qty: number | string; multiplier: number | string }) =>
+  Number(t.qty) * Number(t.multiplier) * (t.asset === 'future' ? TICKS[t.root] ?? 0.01 : 0.01);

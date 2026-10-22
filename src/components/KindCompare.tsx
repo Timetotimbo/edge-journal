@@ -7,6 +7,9 @@ import { byKey, dayOf, money, pct, pnlClass, summarize, timed } from '../lib/sta
 // biggest differences in plain words.
 const mins = (m: number | null) => (m === null ? '–' : m < 1 ? `${Math.round(m * 60)}s` : m < 60 ? `${m < 10 ? m.toFixed(1) : Math.round(m)}m` : `${(m / 60).toFixed(1)}h`);
 const num = (n: number, d = 1) => (+n.toFixed(d)).toString();
+// Whole dollars in the table, so three columns fit a phone
+const usd = (n: number, sign = false) => `${n < 0 ? '-' : sign && n > 0 ? '+' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
+const tick = (n: number) => `$${n >= 100 ? Math.round(n) : +n.toFixed(2)}`;
 const SHORT: Record<AccountKind, string> = { funded: 'Funded', eval: 'Evaluation', sim: 'Sim', other: 'Other' };
 const clock = (h: number) => new Date(2000, 0, 1, 0, h).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '').replace(' AM', 'a').replace(' PM', 'p');
 
@@ -20,24 +23,24 @@ function profile(ts: Trade[]) {
   return { s, days, best, worst, quick, long: ts.filter(t => t.side === 'long').length / Math.max(1, ts.length), accounts: new Set(ts.map(t => t.account)).size };
 }
 type P = ReturnType<typeof profile>;
-const half = (g: P['best']) => (g ? `${clock(+g.key)}–${clock(+g.key + 30)} (${money(g.net, true).replace('.00', '')})` : '–');
+const half = (g: P['best']) => (g ? `${clock(+g.key)}–${clock(+g.key + 30)}` : '–');
 
 const ROWS: [string, (p: P) => string, ((p: P) => number)?][] = [
   ['Accounts', p => String(p.accounts)],
   ['Trades', p => p.s.count.toLocaleString()],
   ['Trading days', p => String(p.days)],
   ['Trades a day', p => num(p.s.tradesPerDay)],
-  ['Net P&L', p => money(p.s.net, true), p => p.s.net],
-  ['Avg day', p => money(p.s.avgDay, true), p => p.s.avgDay],
+  ['Net P&L', p => usd(p.s.net, true), p => p.s.net],
+  ['Avg day', p => usd(p.s.avgDay, true), p => p.s.avgDay],
   ['Win rate', p => pct(p.s.winRate)],
   ['Profit factor', p => (p.s.profitFactor === Infinity ? '∞' : p.s.profitFactor.toFixed(2))],
-  ['Avg win', p => money(p.s.avgWin), p => p.s.avgWin],
-  ['Avg loss', p => money(p.s.avgLoss), p => p.s.avgLoss],
-  ['Expectancy (per trade)', p => money(p.s.expectancy, true), p => p.s.expectancy],
-  ['Biggest loss', p => money(p.s.worst, true), p => p.s.worst],
-  ['Avg size (contracts, micros count 1)', p => num(p.s.avgQty)],
-  ['Size on winners', p => num(p.s.avgQtyWin)],
-  ['Size on losers', p => num(p.s.avgQtyLoss)],
+  ['Avg win', p => usd(p.s.avgWin), p => p.s.avgWin],
+  ['Avg loss', p => usd(p.s.avgLoss), p => p.s.avgLoss],
+  ['Expectancy (per trade)', p => usd(p.s.expectancy, true), p => p.s.expectancy],
+  ['Biggest loss', p => usd(p.s.worst, true), p => p.s.worst],
+  ['Avg size ($ per tick)', p => tick(p.s.avgTick)],
+  ['$ per tick on winners', p => tick(p.s.avgTickWin)],
+  ['$ per tick on losers', p => tick(p.s.avgTickLoss)],
   ['Hold on winners', p => mins(p.s.avgHoldWin)],
   ['Hold on losers', p => mins(p.s.avgHoldLoss)],
   ['Out in under 5 min', p => pct(p.quick)],
@@ -52,8 +55,12 @@ function insights(f: P, e: P) {
   const out: string[] = [];
   const ch = (a: number, b: number) => (b ? (a - b) / Math.abs(b) : 0);
   const say = (cond: boolean, text: string) => cond && out.push(text);
-  const size = ch(f.s.avgQty, e.s.avgQty);
-  say(Math.abs(size) >= 0.15, `On funded accounts you traded ${size > 0 ? 'bigger' : 'smaller'}: ${num(f.s.avgQty)} contracts on average vs ${num(e.s.avgQty)} on evaluations (${size > 0 ? '+' : ''}${Math.round(size * 100)}%).`);
+  const size = ch(f.s.avgTick, e.s.avgTick);
+  say(Math.abs(size) >= 0.15, `On funded accounts you traded ${size > 0 ? 'bigger' : 'smaller'}: ${tick(f.s.avgTick)} a tick on average vs ${tick(e.s.avgTick)} on evaluations (${size > 0 ? '+' : ''}${Math.round(size * 100)}%).`);
+  for (const r of f.s.sizeByRoot.slice(0, 2)) {
+    const o = e.s.sizeByRoot.find(x => x.root === r.root);
+    if (o && Math.abs(ch(r.avg, o.avg)) >= 0.15) out.push(`${r.root}: ${num(r.avg)} contracts a trade funded vs ${num(o.avg)} on evaluations.`);
+  }
   const pd = ch(f.s.tradesPerDay, e.s.tradesPerDay);
   say(Math.abs(pd) >= 0.2, `You took ${pd > 0 ? 'more' : 'fewer'} trades a day on funded: ${num(f.s.tradesPerDay)} vs ${num(e.s.tradesPerDay)}.`);
   say(Math.abs(f.s.winRate - e.s.winRate) >= 0.05, `Win rate was ${pct(f.s.winRate)} funded vs ${pct(e.s.winRate)} on evaluations.`);
@@ -63,7 +70,7 @@ function insights(f: P, e: P) {
   say(Math.abs(win) >= 0.15, `Your average win was ${win > 0 ? 'bigger' : 'smaller'} on funded: ${money(f.s.avgWin)} vs ${money(e.s.avgWin)}.`);
   if (f.s.avgHoldLoss !== null && f.s.avgHoldWin !== null && f.s.avgHoldLoss > f.s.avgHoldWin * 1.3)
     out.push(`On funded you held losers longer than winners: ${mins(f.s.avgHoldLoss)} vs ${mins(f.s.avgHoldWin)}.`);
-  if (f.s.avgQtyLoss > f.s.avgQtyWin * 1.15) out.push(`On funded your size was bigger on losing trades (${num(f.s.avgQtyLoss)}) than winning ones (${num(f.s.avgQtyWin)}).`);
+  if (f.s.avgTickLoss > f.s.avgTickWin * 1.15) out.push(`On funded your size was bigger on losing trades (${tick(f.s.avgTickLoss)} a tick) than winning ones (${tick(f.s.avgTickWin)}).`);
   say(Math.abs(f.long - e.long) >= 0.1, `You went long ${pct(f.long)} of the time funded vs ${pct(e.long)} on evaluations.`);
   const pfGap = f.s.profitFactor - e.s.profitFactor;
   const pfText = (n: number) => (n === Infinity ? '∞' : n.toFixed(2));
@@ -82,6 +89,7 @@ export default function KindCompare({ trades }: { trades: Trade[] }) {
   if (cols.length < 2) return null;
   const f = cols.find(([k]) => k === 'funded')?.[1], e = cols.find(([k]) => k === 'eval')?.[1];
   const notes = f && e ? insights(f, e) : [];
+  const roots = [...new Set(cols.flatMap(([, p]) => p.s.sizeByRoot.filter(r => r.count >= 5).map(r => r.root)))];
   return (
     <section className="card p-4 min-w-0">
       <h3 className="font-semibold">Funded vs evaluation vs sim</h3>
@@ -93,9 +101,9 @@ export default function KindCompare({ trades }: { trades: Trade[] }) {
         <table className="w-full text-xs sm:text-sm num">
           <thead><tr className="text-[11px] text-mute text-right"><th className="text-left font-medium px-1 py-1"></th>{cols.map(([k]) => <th key={k} className={`font-medium px-1 ${k === 'funded' ? 'text-edge' : ''}`}>{SHORT[k]}</th>)}</tr></thead>
           <tbody>
-            {ROWS.map(([label, show, tone]) => (
+            {[...ROWS.slice(0, 15), ...roots.map(r => [`${r} contracts (W / L)`, (p: P) => { const x = p.s.sizeByRoot.find(y => y.root === r); return x ? `${num(x.avg)} (${num(x.win)} / ${num(x.loss)})` : '–'; }] as (typeof ROWS)[number]), ...ROWS.slice(15)].map(([label, show, tone]) => (
               <tr key={label} className="border-t border-line text-right">
-                <td className="text-left px-1 py-1.5 whitespace-nowrap">{label}</td>
+                <td className="text-left px-1 py-1.5 leading-tight">{label}</td>
                 {cols.map(([k, p]) => <td key={k} className={`px-1 py-1.5 ${tone ? pnlClass(tone(p)) : ''} ${k === 'funded' ? 'font-semibold' : ''}`}>{show(p)}</td>)}
               </tr>
             ))}

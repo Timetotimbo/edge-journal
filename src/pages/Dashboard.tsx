@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Trade } from '../lib/types';
+import { tickDollars } from '../lib/instruments';
 import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type Group } from '../lib/stats';
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
@@ -15,7 +16,10 @@ const pf = (n: number) => (n === Infinity ? '∞' : n.toFixed(2));
 const usd = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
 // Buckets that sort in order: [label, test]
 const HOLDS: [string, (m: number) => boolean][] = [['Under 1 min', m => m < 1], ['1–5 min', m => m < 5], ['5–15 min', m => m < 15], ['15–60 min', m => m < 60], ['1–4 hours', m => m < 240], ['4+ hours', () => true]];
-const SIZES: [string, (q: number) => boolean][] = [['1 contract', q => q <= 1], ['2', q => q <= 2], ['3–5', q => q <= 5], ['6–10', q => q <= 10], ['11–20', q => q <= 20], ['21+', () => true]];
+// Size by dollars per tick, so NQ and MNQ compare fairly (1 NQ = $5 a tick = 10 MNQ)
+const SIZES: [string, (d: number) => boolean][] = [['Up to $2.50 (≤5 MNQ)', d => d <= 2.5 + 1e-9], ['$3–5 (1 NQ / 10 MNQ)', d => d <= 5 + 1e-9], ['$5–10 (2 NQ)', d => d <= 10 + 1e-9],
+  ['$10–25 (3–5 NQ)', d => d <= 25 + 1e-9], ['$25–50 (6–10 NQ)', d => d <= 50 + 1e-9], ['$50–100 (11–20 NQ)', d => d <= 100 + 1e-9], ['Over $100 (21+ NQ)', () => true]];
+const tick$ = (n: number) => `$${n >= 100 ? Math.round(n) : +n.toFixed(2)}`;
 const bucket = <T,>(list: [string, (x: T) => boolean][], x: T) => list.find(([, f]) => f(x))![0];
 const clock = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '').replace(' AM', 'a').replace(' PM', 'p');
 
@@ -125,7 +129,7 @@ export default function Dashboard({ trades, everyKind, perAccount, everyAccount,
     return gs.sort((a, b) => +a.key - +b.key).map(g => { const d = new Date(2000, 0, 1, 0, +g.key); const e = new Date(d.getTime() + 30 * 60000); return { ...g, key: `${clock(d)}–${clock(e)}` }; });
   }, [trades]);
   const holds = useMemo(() => byKey(trades.filter(timed), t => bucket(HOLDS, (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()) / 60000)), [trades]);
-  const sizes = useMemo(() => byKey(trades, t => bucket(SIZES, Number(t.qty))), [trades]);
+  const sizes = useMemo(() => byKey(trades, t => bucket(SIZES, tickDollars(t))), [trades]);
   // Days by how many trades were taken: does trading more help or hurt?
   const busy = useMemo(() => {
     const perDay = new Map<string, number>();
@@ -156,7 +160,9 @@ export default function Dashboard({ trades, everyKind, perAccount, everyAccount,
         <Stat all={x(v => `${money(v.high, true)} / ${money(v.low, true)}`)} label="Highest / lowest P&L" value={money(s.high, true)} cls="text-win" sub={`Lowest ${money(s.low, true)} · running total`} />
         <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
         <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
-        <Stat all={x(v => `${size(v.avgQtyWin)} W · ${size(v.avgQtyLoss)} L`)} label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
+        <Stat all={x(v => `${tick$(v.avgTickWin)} W · ${tick$(v.avgTickLoss)} L`)} label="Avg size ($ per tick)" value={`${tick$(s.avgTick)}/tick`} sub={`Winners ${tick$(s.avgTickWin)} · losers ${tick$(s.avgTickLoss)}`} />
+        <Stat all={x(v => v.sizeByRoot.slice(0, 2).map(r => `${r.root} ${size(r.avg)}`).join(' · ') || '–')} label="Avg contracts" value={s.sizeByRoot.slice(0, 2).map(r => `${r.root} ${size(r.avg)}`).join(' · ') || '–'}
+          sub={s.sizeByRoot.slice(0, 2).map(r => `${r.root} W ${size(r.win)} / L ${size(r.loss)}`).join(' · ')} />
         <Stat all={x(v => `${v.winStreak} W · ${v.lossStreak} L`)} label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />
         <Stat all={x(v => `${money(v.avgDay, true)} · ${v.winDays + v.lossDays + v.flatDays} days`)} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.winDays + s.lossDays + s.flatDays} days traded · ${s.tradesPerDay.toFixed(1)} trades a day`} />
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
@@ -196,7 +202,21 @@ export default function Dashboard({ trades, everyKind, perAccount, everyAccount,
       <Table title="Best time of day" note="When you entered, by half hour, in your time. ★ marks the best stretch (5+ trades)." groups={halfHours} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Table title="By hold time" note="How long you stayed in." groups={holds} order={HOLDS.map(h => h[0])} />
-        <Table title="By size" note="Contracts or shares per trade." groups={sizes} order={SIZES.map(x => x[0])} />
+        <Table title="By size ($ per tick)" note="What one tick was worth on the whole position: 1 NQ = $5, 1 MNQ = $0.50, 1 ES = $12.50." groups={sizes} order={SIZES.map(x => x[0])} />
+        <section className="card p-4 min-w-0">
+          <h3 className="font-semibold">Contracts by instrument</h3>
+          <p className="text-xs text-mute mt-0.5">Average contracts per trade, on winners and losers, and the most at once.</p>
+          <div className="overflow-x-auto -mx-1 mt-2">
+            <table className="w-full text-xs sm:text-sm num">
+              <thead><tr className="text-[11px] text-mute text-right"><th className="text-left font-medium px-1 py-1"></th><th className="font-medium px-1">Trades</th><th className="font-medium px-1">Avg</th><th className="font-medium px-1">Winners</th><th className="font-medium px-1">Losers</th><th className="font-medium px-1">Most</th></tr></thead>
+              <tbody>{s.sizeByRoot.map(r => (
+                <tr key={r.root} className="border-t border-line text-right">
+                  <td className="text-left px-1 py-1.5 font-medium">{r.root}</td><td className="px-1">{r.count}</td><td className="px-1 font-semibold">{size(r.avg)}</td>
+                  <td className="px-1 text-win">{size(r.win)}</td><td className={`px-1 ${r.loss > r.win * 1.15 ? 'text-loss font-semibold' : 'text-loss'}`}>{size(r.loss)}</td><td className="px-1">{size(r.max)}</td>
+                </tr>))}</tbody>
+            </table>
+          </div>
+        </section>
         <Table title="Long vs short" groups={byKey(trades, t => (t.side === 'long' ? 'Long' : 'Short'))} order={['Long', 'Short']} />
         <Table title="By trades that day" note="Does trading more help or hurt?" groups={busy} order={['1–3 trades', '4–10 trades', '11–20 trades', '21+ trades']} />
         <Breakdown title="By instrument" groups={sorted(byKey(trades, t => t.root))} empty="No trades in this range." />

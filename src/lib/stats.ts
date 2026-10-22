@@ -1,4 +1,5 @@
 import type { Trade } from './types';
+import { tickDollars } from './instruments';
 
 export const dayOf = (iso: string) => {
   const d = new Date(iso);
@@ -9,7 +10,7 @@ export type Summary = {
   count: number; wins: number; losses: number; net: number; gross: number; fees: number;
   winRate: number; avgWin: number; avgLoss: number; profitFactor: number; expectancy: number;
   best: number; worst: number; maxDrawdown: number; avgHoldMin: number | null; winDays: number; lossDays: number;
-  avgHoldWin: number | null; avgHoldLoss: number | null; avgQty: number; avgQtyWin: number; avgQtyLoss: number;
+  avgHoldWin: number | null; avgHoldLoss: number | null; avgTick: number; avgTickWin: number; avgTickLoss: number; sizeByRoot: RootSize[];
   winStreak: number; lossStreak: number; avgDay: number; tradesPerDay: number;
   /** Highest and lowest running P&L reached, trade by trade */
   high: number; low: number;
@@ -49,7 +50,7 @@ export function summarize(trades: Trade[]): Summary {
     worst: Math.min(0, ...trades.map(t => Number(t.net_pnl))),
     maxDrawdown: dd,
     avgHoldMin: hold(trades), avgHoldWin: hold(wins), avgHoldLoss: hold(losses),
-    avgQty: avg(trades.map(t => Number(t.qty))), avgQtyWin: avg(wins.map(t => Number(t.qty))), avgQtyLoss: avg(losses.map(t => Number(t.qty))),
+    avgTick: avg(trades.map(tickDollars)), avgTickWin: avg(wins.map(tickDollars)), avgTickLoss: avg(losses.map(tickDollars)), sizeByRoot: sizeByRoot(trades),
     winStreak, lossStreak, high: peak, low,
     winDays: days.filter(d => d.net > 0).length,
     lossDays: days.filter(d => d.net < 0).length,
@@ -57,6 +58,16 @@ export function summarize(trades: Trade[]): Summary {
     avgDay: days.length ? sum(trades) / days.length : 0,
     tradesPerDay: days.length ? trades.length / days.length : 0,
   };
+}
+
+/** Contracts per trade on each instrument (NQ and MNQ apart: a contract of each is worth very different money) */
+export type RootSize = { root: string; count: number; avg: number; win: number; loss: number; max: number };
+export function sizeByRoot(trades: Trade[]): RootSize[] {
+  const m = new Map<string, Trade[]>();
+  for (const t of trades) (m.get(t.root) || m.set(t.root, []).get(t.root)!).push(t);
+  const q = (xs: Trade[]) => avg(xs.map(t => Number(t.qty)));
+  return [...m.entries()].map(([root, ts]) => ({ root, count: ts.length, avg: q(ts), win: q(ts.filter(t => t.net_pnl > 0)), loss: q(ts.filter(t => t.net_pnl < 0)), max: Math.max(...ts.map(t => Number(t.qty))) }))
+    .sort((a, b) => b.count - a.count);
 }
 
 export type Group = { key: string; count: number; net: number; wins: number; winRate: number; won: number; lost: number; avg: number; pf: number };
