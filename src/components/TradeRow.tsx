@@ -11,7 +11,7 @@ export default function TradeRow({ t, onOpen, selected, onSelect }: { t: Trade; 
       <button onClick={() => onOpen(t.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left">
         <span className={`shrink-0 w-12 text-center rounded-md py-0.5 text-[11px] font-bold ${t.side === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}`}>{t.side === 'long' ? 'LONG' : 'SHORT'}</span>
         <span className="min-w-0 flex-1">
-          <span className="block font-semibold truncate">{t.symbol} <span className="text-mute font-normal">×{Number(t.qty)}</span></span>
+          <span className="block font-semibold truncate">{t.symbol} <span className="text-mute font-normal">×{Number(t.qty)}</span>{(t.copies || 1) > 1 && <span className="ml-1.5 rounded bg-line px-1.5 py-px text-[10px] font-semibold text-mute align-middle">copied ×{t.copies}</span>}</span>
           <span className="block text-xs text-mute truncate">{when(t.entry_at)} · {price(t.entry_price)} → {price(t.exit_price)}{t.setup ? ` · ${t.setup}` : ''}</span>
         </span>
         <span className={`num font-bold shrink-0 ${pnlClass(t.net_pnl)}`}>{money(Number(t.net_pnl), true)}</span>

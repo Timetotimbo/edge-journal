@@ -1,6 +1,8 @@
 import type { Trade } from './types';
 
-export type Filters = { range: string; account: string; asset: string; side: string };
+export type Filters = { range: string; account: string; asset: string; side: string; copies?: string };
+// Trades taken on several accounts with a trade copier: all of them, each idea once, or only copied / only single trades
+export const COPIES: [string, string][] = [['', 'All trades'], ['once', 'Count copies once'], ['copied', 'Only copied trades'], ['solo', 'Not copied']];
 export const RANGES: [string, string][] = [['week', 'This week'], ['month', 'This month'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['year', 'This year'], ['all', 'All time']];
 
 function startOf(range: string): number {
@@ -19,5 +21,6 @@ export function applyFilters(trades: Trade[], f: Filters) {
     new Date(t.entry_at).getTime() >= from &&
     (!f.account || (t.account || t.broker) === f.account) &&
     (!f.asset || t.asset === f.asset) &&
-    (!f.side || t.side === f.side));
+    (!f.side || t.side === f.side) &&
+    (!f.copies || (f.copies === 'once' ? t.lead !== false : f.copies === 'copied' ? (t.copies || 1) > 1 : (t.copies || 1) === 1)));
 }

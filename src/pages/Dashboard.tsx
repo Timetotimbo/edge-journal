@@ -1,11 +1,52 @@
 import { useMemo } from 'react';
 import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Trade } from '../lib/types';
-import { byKey, equityCurve, money, pct, pnlClass, summarize, type Group } from '../lib/stats';
+import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type Group } from '../lib/stats';
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const mins = (m: number | null) => (m === null ? '–' : m < 1 ? `${Math.round(m * 60)}s` : m < 60 ? `${m < 10 ? m.toFixed(1) : Math.round(m)}m` : `${(m / 60).toFixed(1)}h`);
+const size = (n: number) => (n ? (+n.toFixed(1)).toString() : '–');
+const pf = (n: number) => (n === Infinity ? '∞' : n.toFixed(2));
+// Whole dollars, so the tables fit a phone
+const usd = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
+// Buckets that sort in order: [label, test]
+const HOLDS: [string, (m: number) => boolean][] = [['Under 1 min', m => m < 1], ['1–5 min', m => m < 5], ['5–15 min', m => m < 15], ['15–60 min', m => m < 60], ['1–4 hours', m => m < 240], ['4+ hours', () => true]];
+const SIZES: [string, (q: number) => boolean][] = [['1 contract', q => q <= 1], ['2', q => q <= 2], ['3–5', q => q <= 5], ['6–10', q => q <= 10], ['11–20', q => q <= 20], ['21+', () => true]];
+const bucket = <T,>(list: [string, (x: T) => boolean][], x: T) => list.find(([, f]) => f(x))![0];
+const clock = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '').replace(' AM', 'a').replace(' PM', 'p');
+
+/** A breakdown as a table: trades, win rate, average, profit factor and net; the best and worst rows are marked */
+function Table({ title, note, groups, order }: { title: string; note?: string; groups: Group[]; order?: string[] }) {
+  const rows = order ? order.map(k => groups.find(g => g.key === k)).filter(Boolean) as Group[] : groups;
+  const real = rows.filter(g => g.count >= 5);
+  const best = real.length > 1 ? real.reduce((a, b) => (b.net > a.net ? b : a)).key : '';
+  const worst = real.length > 1 ? real.reduce((a, b) => (b.net < a.net ? b : a)).key : '';
+  return (
+    <section className="card p-4 min-w-0">
+      <h3 className="font-semibold">{title}</h3>
+      {note && <p className="text-xs text-mute mt-0.5">{note}</p>}
+      {!rows.length ? <p className="text-sm text-mute mt-2">No trades in this range.</p> : (
+        <div className="overflow-x-auto -mx-1 mt-2">
+          <table className="w-full text-xs sm:text-sm num">
+            <thead><tr className="text-[11px] text-mute text-right"><th className="text-left font-medium px-1 py-1"></th><th className="font-medium px-1">Trades</th><th className="font-medium px-1">Win</th><th className="font-medium px-1">Avg</th><th className="font-medium px-1">PF</th><th className="font-medium px-1">Net</th></tr></thead>
+            <tbody>
+              {rows.map(g => (
+                <tr key={g.key} className={`border-t border-line text-right ${g.key === best ? 'bg-win/10' : g.key === worst ? 'bg-loss/10' : ''}`}>
+                  <td className="text-left px-1 py-1.5 whitespace-nowrap font-medium">{g.key}{g.key === best ? ' ★' : ''}</td>
+                  <td className="px-1">{g.count}</td><td className="px-1">{pct(g.winRate)}</td>
+                  <td className={`px-1 ${pnlClass(g.avg)}`}>{usd(g.avg)}</td><td className="px-1">{pf(g.pf)}</td>
+                  <td className={`px-1 font-semibold ${pnlClass(g.net)}`}>{usd(g.net)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function Stat({ label, value, sub, cls = '' }: { label: string; value: string; sub?: string; cls?: string }) {
   return (
@@ -20,7 +61,7 @@ function Stat({ label, value, sub, cls = '' }: { label: string; value: string; s
 function Breakdown({ title, groups, empty }: { title: string; groups: Group[]; empty: string }) {
   const max = Math.max(1, ...groups.map(g => Math.abs(g.net)));
   return (
-    <section className="card p-4">
+    <section className="card p-4 min-w-0">
       <h3 className="font-semibold mb-3">{title}</h3>
       {!groups.length ? <p className="text-sm text-mute">{empty}</p> : (
         <ul className="space-y-2">
@@ -44,7 +85,7 @@ function Breakdown({ title, groups, empty }: { title: string; groups: Group[]; e
 
 function Bars({ title, data }: { title: string; data: { name: string; net: number }[] }) {
   return (
-    <section className="card p-4">
+    <section className="card p-4 min-w-0">
       <h3 className="font-semibold mb-2">{title}</h3>
       <div className="h-44">
         <ResponsiveContainer>
@@ -72,6 +113,20 @@ export default function Dashboard({ trades, all, onDay, onTrade, onImport }: { t
   const hours = useMemo(() => byKey(trades.filter(t => new Date(t.entry_at).getHours() + new Date(t.entry_at).getMinutes() > 0), t => String(new Date(t.entry_at).getHours()))
     .sort((a, b) => +a.key - +b.key).map(g => ({ name: `${((+g.key + 11) % 12) + 1}${+g.key < 12 ? 'a' : 'p'}`, net: g.net })), [trades]);
   const sorted = (gs: Group[]) => gs.sort((a, b) => b.net - a.net);
+  // Time of day in half hours, in this phone's time
+  const halfHours = useMemo(() => {
+    const gs = byKey(trades.filter(timed), t => { const d = new Date(t.entry_at); return String(d.getHours() * 60 + (d.getMinutes() < 30 ? 0 : 30)); });
+    return gs.sort((a, b) => +a.key - +b.key).map(g => { const d = new Date(2000, 0, 1, 0, +g.key); const e = new Date(d.getTime() + 30 * 60000); return { ...g, key: `${clock(d)}–${clock(e)}` }; });
+  }, [trades]);
+  const holds = useMemo(() => byKey(trades.filter(timed), t => bucket(HOLDS, (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()) / 60000)), [trades]);
+  const sizes = useMemo(() => byKey(trades, t => bucket(SIZES, Number(t.qty))), [trades]);
+  // Days by how many trades were taken: does trading more help or hurt?
+  const busy = useMemo(() => {
+    const perDay = new Map<string, number>();
+    for (const t of trades) { const d = dayOf(t.entry_at); perDay.set(d, (perDay.get(d) || 0) + 1); }
+    const label = (n: number) => (n <= 3 ? '1–3 trades' : n <= 10 ? '4–10 trades' : n <= 20 ? '11–20 trades' : '21+ trades');
+    return byKey(trades, t => label(perDay.get(dayOf(t.entry_at))!));
+  }, [trades]);
 
   if (!all.length) {
     return (
@@ -93,7 +148,11 @@ export default function Dashboard({ trades, all, onDay, onTrade, onImport }: { t
         <Stat label="Best trade" value={money(s.best, true)} cls="text-win" />
         <Stat label="Worst trade" value={money(s.worst, true)} cls="text-loss" />
         <Stat label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
-        <Stat label="Avg hold" value={s.avgHoldMin === null ? '–' : s.avgHoldMin < 60 ? `${Math.round(s.avgHoldMin)}m` : `${(s.avgHoldMin / 60).toFixed(1)}h`} />
+        <Stat label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
+        <Stat label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
+        <Stat label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />
+        <Stat label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.tradesPerDay.toFixed(1)} trades a day`} />
+        <Stat label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
 
       <section className="card p-4">
@@ -118,10 +177,19 @@ export default function Dashboard({ trades, all, onDay, onTrade, onImport }: { t
 
       <Calendar trades={all} onDay={onDay} />
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Bars title="By day of week" data={weekday} />
         <Bars title="By hour entered" data={hours} />
+      </div>
+
+      <Table title="Best time of day" note="When you entered, by half hour, in your time. ★ marks the best stretch (5+ trades)." groups={halfHours} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Table title="By hold time" note="How long you stayed in." groups={holds} order={HOLDS.map(h => h[0])} />
+        <Table title="By size" note="Contracts or shares per trade." groups={sizes} order={SIZES.map(x => x[0])} />
+        <Table title="Long vs short" groups={byKey(trades, t => (t.side === 'long' ? 'Long' : 'Short'))} order={['Long', 'Short']} />
+        <Table title="By trades that day" note="Does trading more help or hurt?" groups={busy} order={['1–3 trades', '4–10 trades', '11–20 trades', '21+ trades']} />
         <Breakdown title="By instrument" groups={sorted(byKey(trades, t => t.root))} empty="No trades in this range." />
+        <Breakdown title="By account" groups={sorted(byKey(trades, t => t.account || t.broker)).slice(0, 15)} empty="No trades in this range." />
         <Breakdown title="By setup" groups={sorted(byKey(trades, t => t.setup))} empty="Name a setup on your trades to compare them." />
         <Breakdown title="Mistakes (what they cost)" groups={byKey(trades, t => t.mistakes).sort((a, b) => a.net - b.net)} empty="Mark mistakes on trades to see what they cost you." />
         <Breakdown title="By emotion" groups={sorted(byKey(trades, t => t.emotion))} empty="Pick how you felt on each trade to see which emotions pay." />

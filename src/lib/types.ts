@@ -53,6 +53,9 @@ export type Trade = {
   notes: string | null;
   shots: string[];
   import_key: string | null;
+  /** Worked out when loaded (lib/copies.ts), not stored: accounts that took this trade with a copier, and the one counted */
+  copies?: number;
+  lead?: boolean;
 };
 
 export type NewTrade = Omit<Trade, 'id'>;

@@ -9,20 +9,29 @@ export type Summary = {
   count: number; wins: number; losses: number; net: number; gross: number; fees: number;
   winRate: number; avgWin: number; avgLoss: number; profitFactor: number; expectancy: number;
   best: number; worst: number; maxDrawdown: number; avgHoldMin: number | null; winDays: number; lossDays: number;
+  avgHoldWin: number | null; avgHoldLoss: number | null; avgQty: number; avgQtyWin: number; avgQtyLoss: number;
+  winStreak: number; lossStreak: number; avgDay: number; tradesPerDay: number;
 };
+const holdMin = (t: Trade) => (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()) / 60000;
+const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
+/** Has real entry and exit times (Robinhood and Schwab give dates only) */
+export const timed = (t: Trade) => !!t.exit_at && new Date(t.entry_at).getHours() + new Date(t.entry_at).getMinutes() > 0;
 
 export function summarize(trades: Trade[]): Summary {
   const wins = trades.filter(t => t.net_pnl > 0), losses = trades.filter(t => t.net_pnl < 0);
   const sum = (xs: Trade[], k: 'net_pnl' | 'gross_pnl' | 'fees' = 'net_pnl') => xs.reduce((s, t) => s + Number(t[k]), 0);
   const winSum = sum(wins), lossSum = sum(losses);
-  let peak = 0, run = 0, dd = 0;
+  let peak = 0, run = 0, dd = 0, w = 0, l = 0, winStreak = 0, lossStreak = 0;
   for (const t of [...trades].sort((a, b) => a.entry_at.localeCompare(b.entry_at))) {
     run += Number(t.net_pnl);
     peak = Math.max(peak, run);
     dd = Math.min(dd, run - peak);
+    w = t.net_pnl > 0 ? w + 1 : 0;
+    l = t.net_pnl < 0 ? l + 1 : 0;
+    winStreak = Math.max(winStreak, w);
+    lossStreak = Math.max(lossStreak, l);
   }
-  // Only trades with real times (Robinhood and Schwab give dates only)
-  const timed = trades.filter(t => t.exit_at && new Date(t.entry_at).getHours() + new Date(t.entry_at).getMinutes() > 0);
+  const hold = (xs: Trade[]) => { const h = xs.filter(timed).map(holdMin); return h.length ? avg(h) : null; };
   const days = byKey(trades, t => dayOf(t.entry_at));
   return {
     count: trades.length, wins: wins.length, losses: losses.length,
@@ -35,27 +44,33 @@ export function summarize(trades: Trade[]): Summary {
     best: Math.max(0, ...trades.map(t => Number(t.net_pnl))),
     worst: Math.min(0, ...trades.map(t => Number(t.net_pnl))),
     maxDrawdown: dd,
-    avgHoldMin: timed.length ? timed.reduce((s, t) => s + (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()), 0) / timed.length / 60000 : null,
+    avgHoldMin: hold(trades), avgHoldWin: hold(wins), avgHoldLoss: hold(losses),
+    avgQty: avg(trades.map(t => Number(t.qty))), avgQtyWin: avg(wins.map(t => Number(t.qty))), avgQtyLoss: avg(losses.map(t => Number(t.qty))),
+    winStreak, lossStreak,
     winDays: days.filter(d => d.net > 0).length,
     lossDays: days.filter(d => d.net < 0).length,
+    avgDay: days.length ? sum(trades) / days.length : 0,
+    tradesPerDay: days.length ? trades.length / days.length : 0,
   };
 }
 
-export type Group = { key: string; count: number; net: number; wins: number; winRate: number };
+export type Group = { key: string; count: number; net: number; wins: number; winRate: number; won: number; lost: number; avg: number; pf: number };
 
 export function byKey(trades: Trade[], keyOf: (t: Trade) => string | string[] | null | undefined): Group[] {
-  const m = new Map<string, { count: number; net: number; wins: number }>();
+  const m = new Map<string, { count: number; net: number; wins: number; won: number; lost: number }>();
   for (const t of trades) {
     const ks = keyOf(t);
     for (const k of Array.isArray(ks) ? ks : ks ? [ks] : []) {
-      const g = m.get(k) || { count: 0, net: 0, wins: 0 };
+      const g = m.get(k) || { count: 0, net: 0, wins: 0, won: 0, lost: 0 };
+      const n = Number(t.net_pnl);
       g.count++;
-      g.net += Number(t.net_pnl);
-      if (t.net_pnl > 0) g.wins++;
+      g.net += n;
+      if (n > 0) { g.wins++; g.won += n; } else g.lost += n;
       m.set(k, g);
     }
   }
-  return [...m.entries()].map(([key, g]) => ({ key, ...g, winRate: g.count ? g.wins / g.count : 0 }));
+  return [...m.entries()].map(([key, g]) => ({ key, ...g, winRate: g.count ? g.wins / g.count : 0, avg: g.count ? g.net / g.count : 0,
+    pf: g.lost ? g.won / Math.abs(g.lost) : g.won > 0 ? Infinity : 0 }));
 }
 
 export function equityCurve(trades: Trade[]) {

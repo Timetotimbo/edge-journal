@@ -85,7 +85,7 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
           <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${t.side === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}`}>{t.side.toUpperCase()}</span>
           <div className="min-w-0">
             <div className="font-bold truncate">{t.symbol} ×{Number(t.qty)}</div>
-            <div className="text-xs text-mute">{when(t.entry_at)} · {t.account || t.broker}</div>
+            <div className="text-xs text-mute">{when(t.entry_at)} · {t.account || t.broker}{(t.copies || 1) > 1 ? ` · copied on ${t.copies} accounts` : ''}</div>
           </div>
           <span className={`ml-auto num text-lg font-extrabold ${pnlClass(t.net_pnl)}`}>{money(Number(t.net_pnl), true)}</span>
           <button onClick={onClose} className="text-mute hover:text-ink" aria-label="Close"><X className="w-5 h-5" /></button>

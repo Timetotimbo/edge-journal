@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
-import { applyFilters, RANGES, type Filters } from './lib/filters';
+import { applyFilters, COPIES, RANGES, type Filters } from './lib/filters';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Trades from './pages/Trades';
@@ -21,8 +21,8 @@ type Tab = (typeof TABS)[number]['id'];
 const tabFromHash = (): Tab => (TABS.find(t => location.hash.startsWith(`#${t.id}`))?.id || 'dashboard');
 
 const saved = (): Filters => {
-  try { return { range: 'month', account: '', asset: '', side: '', ...JSON.parse(localStorage.getItem('tj_filters') || '{}') }; }
-  catch { return { range: 'month', account: '', asset: '', side: '' }; }
+  try { return { range: 'month', account: '', asset: '', side: '', copies: 'once', ...JSON.parse(localStorage.getItem('tj_filters') || '{}') }; }
+  catch { return { range: 'month', account: '', asset: '', side: '', copies: 'once' }; }
 };
 
 export default function App() {
@@ -99,6 +99,11 @@ export default function App() {
             <select className="field !w-auto !h-9" value={filters.side} onChange={e => setFilters({ ...filters, side: e.target.value })}>
               <option value="">Long & short</option><option value="long">Long</option><option value="short">Short</option>
             </select>
+            {j.trades?.some(t => (t.copies || 1) > 1) && (
+              <select className="field !w-auto !h-9" value={filters.copies || ''} onChange={e => setFilters({ ...filters, copies: e.target.value })}>
+                {COPIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            )}
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>

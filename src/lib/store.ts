@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import type { Day, NewTrade, Trade } from './types';
+import { markCopies } from './copies';
 
 /** Every trade and day note, loaded once and kept in step with edits. */
 export function useJournal(userId: string | undefined) {
@@ -18,6 +19,7 @@ export function useJournal(userId: string | undefined) {
       all.push(...(data as Trade[]));
       if (!data || data.length < 1000) break;
     }
+    markCopies(all);
     setTrades(all);
     const { data: d } = await supabase.from('tj_days').select('day, plan, review, mood');
     setDays(Object.fromEntries((d || []).map((x: Day) => [x.day, x])));
