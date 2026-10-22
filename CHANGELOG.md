@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.7.0 — 2026-10-22
+- Zoomed-out trade charts: 1h, 4h and daily buttons beside 1m/5m/15m show the days and weeks around a trade, from hourly bars for the trade's month and the months either side (tools/export_hourly.py makes them from NinjaTrader's minute history, following the most-traded contract each day).
+
 ## 1.6.1 — 2026-10-22
 - The adding-to-positions report ignores the Adds filter (it compares every kind of trade), so its month-by-month table shows the real share of trades where you averaged down. It names what it's counting (account type, account, dates).
 
