@@ -152,6 +152,7 @@ export default function Dashboard({ trades, perAccount, everyAccount, all, onDay
         <Stat all={x(v => `${money(v.avgWin)} / ${money(v.avgLoss)}`)} label="Avg win / loss" value={s.avgLoss ? (s.avgWin / Math.abs(s.avgLoss)).toFixed(2) : '–'} sub={`${money(s.avgWin)} / ${money(s.avgLoss)}`} />
         <Stat all={x(v => money(v.best, true))} label="Best trade" value={money(s.best, true)} cls="text-win" />
         <Stat all={x(v => money(v.worst, true))} label="Worst trade" value={money(s.worst, true)} cls="text-loss" />
+        <Stat all={x(v => `${money(v.high, true)} / ${money(v.low, true)}`)} label="Highest / lowest P&L" value={money(s.high, true)} cls="text-win" sub={`Lowest ${money(s.low, true)} · running total`} />
         <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
         <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
         <Stat all={x(v => `${size(v.avgQtyWin)} W · ${size(v.avgQtyLoss)} L`)} label="Avg size" value={`${size(s.avgQty)} ct`} sub={`Winners ${size(s.avgQtyWin)} · losers ${size(s.avgQtyLoss)}`} />
@@ -159,6 +160,8 @@ export default function Dashboard({ trades, perAccount, everyAccount, all, onDay
         <Stat all={x(v => money(v.avgDay, true))} label="Avg day" value={money(s.avgDay, true)} cls={pnlClass(s.avgDay)} sub={`${s.tradesPerDay.toFixed(1)} trades a day`} />
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
+
+      <AccountRange trades={perAccount} />
 
       <section className="card p-4">
         <h3 className="font-semibold mb-2">Equity curve</h3>
@@ -186,8 +189,6 @@ export default function Dashboard({ trades, perAccount, everyAccount, all, onDay
         <Bars title="By day of week" data={weekday} />
         <Bars title="By hour entered" data={hours} />
       </div>
-
-      <AccountRange trades={perAccount} />
 
       <Table title="Best time of day" note="When you entered, by half hour, in your time. ★ marks the best stretch (5+ trades)." groups={halfHours} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -11,6 +11,8 @@ export type Summary = {
   best: number; worst: number; maxDrawdown: number; avgHoldMin: number | null; winDays: number; lossDays: number;
   avgHoldWin: number | null; avgHoldLoss: number | null; avgQty: number; avgQtyWin: number; avgQtyLoss: number;
   winStreak: number; lossStreak: number; avgDay: number; tradesPerDay: number;
+  /** Highest and lowest running P&L reached, trade by trade */
+  high: number; low: number;
 };
 const holdMin = (t: Trade) => (new Date(t.exit_at!).getTime() - new Date(t.entry_at).getTime()) / 60000;
 const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
@@ -21,11 +23,12 @@ export function summarize(trades: Trade[]): Summary {
   const wins = trades.filter(t => t.net_pnl > 0), losses = trades.filter(t => t.net_pnl < 0);
   const sum = (xs: Trade[], k: 'net_pnl' | 'gross_pnl' | 'fees' = 'net_pnl') => xs.reduce((s, t) => s + Number(t[k]), 0);
   const winSum = sum(wins), lossSum = sum(losses);
-  let peak = 0, run = 0, dd = 0, w = 0, l = 0, winStreak = 0, lossStreak = 0;
+  let peak = 0, run = 0, dd = 0, w = 0, l = 0, winStreak = 0, lossStreak = 0, low = 0;
   for (const t of [...trades].sort((a, b) => a.entry_at.localeCompare(b.entry_at))) {
     run += Number(t.net_pnl);
     peak = Math.max(peak, run);
     dd = Math.min(dd, run - peak);
+    low = Math.min(low, run);
     w = t.net_pnl > 0 ? w + 1 : 0;
     l = t.net_pnl < 0 ? l + 1 : 0;
     winStreak = Math.max(winStreak, w);
@@ -46,7 +49,7 @@ export function summarize(trades: Trade[]): Summary {
     maxDrawdown: dd,
     avgHoldMin: hold(trades), avgHoldWin: hold(wins), avgHoldLoss: hold(losses),
     avgQty: avg(trades.map(t => Number(t.qty))), avgQtyWin: avg(wins.map(t => Number(t.qty))), avgQtyLoss: avg(losses.map(t => Number(t.qty))),
-    winStreak, lossStreak,
+    winStreak, lossStreak, high: peak, low,
     winDays: days.filter(d => d.net > 0).length,
     lossDays: days.filter(d => d.net < 0).length,
     avgDay: days.length ? sum(trades) / days.length : 0,
