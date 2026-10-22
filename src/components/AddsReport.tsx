@@ -8,7 +8,7 @@ import { byKey, dayOf, pct, pnlClass } from '../lib/stats';
 const usd = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
 const pf = (n: number) => (n === Infinity ? '∞' : n.toFixed(2));
 
-export default function AddsReport({ trades, onPick }: { trades: Trade[]; onPick: (adds: string) => void }) {
+export default function AddsReport({ trades, scope, onPick }: { trades: Trade[]; scope: string; onPick: (adds: string) => void }) {
   const r = useMemo(() => {
     const groups = byKey(trades, t => addKind(t));
     const red = trades.filter(t => t.addRed);
@@ -31,6 +31,7 @@ export default function AddsReport({ trades, onPick }: { trades: Trade[]; onPick
   return (
     <section className="card p-4 min-w-0">
       <h3 className="font-semibold">Adding to positions</h3>
+      <p className="text-xs text-edge mt-0.5">Counting: {scope}</p>
       <p className="text-xs text-mute mt-0.5">An add is a buy (long) or sell (short) after the first entry. Red means the add's price was worse than your average entry at that moment: you were losing and averaged down. Tap a row to see those trades.</p>
       <ul className="mt-3 space-y-1.5 text-sm list-disc pl-5">
         <li>You added to a losing position on <b>{r.red.length}</b> trades ({pct(r.red.length / trades.length)}). Just the added contracts {r.costRed < 0 ? 'lost' : 'made'} <b className={pnlClass(r.costRed)}>{usd(r.costRed)}</b>.</li>

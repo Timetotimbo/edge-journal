@@ -52,6 +52,8 @@ export default function App() {
   // Every trade on each account (copies too), for each account's own running P&L
   const perAccount = useMemo(() => applyFilters(j.trades || [], { ...filters, copies: '' }), [j.trades, filters]);
   // Every account type, to compare funded with evaluation and sim trading
+  // The adds report compares every kind of trade, so it ignores the Adds filter
+  const anyAdds = useMemo(() => applyFilters(j.trades || [], { ...filters, adds: '' }), [j.trades, filters]);
   const everyKind = useMemo(() => applyFilters(j.trades || [], { ...filters, account: '', kind: '', copies: '' }), [j.trades, filters]);
   const kindsPresent = useMemo(() => KINDS.filter(([k]) => (j.trades || []).some(t => accountKind(t.account) === k)), [j.trades]);
   const everyAccount = useMemo(() => (filters.account ? applyFilters(j.trades || [], { ...filters, account: '' }) : null), [j.trades, filters]);
@@ -126,7 +128,7 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={[filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), RANGES.find(r => r[0] === filters.range)?.[1].toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ')} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}

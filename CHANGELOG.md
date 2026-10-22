@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.6.1 — 2026-10-22
+- The adding-to-positions report ignores the Adds filter (it compares every kind of trade), so its month-by-month table shows the real share of trades where you averaged down. It names what it's counting (account type, account, dates).
+
 ## 1.6.0 — 2026-10-22
 - Adding to positions: each trade's adds are checked against the average entry at that moment, so the journal knows when you averaged down (added while losing) and when you added to a winner that then turned into a loss. A report shows how each kind of trade did, what just the added contracts made or lost, how many of the biggest losses came from averaging down, and a month-by-month view of the habit.
 - New "Adds" filter (tap a row in the report to see those trades), and a warning on each trade where you averaged down or added to a winner that turned.

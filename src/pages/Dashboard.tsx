@@ -111,7 +111,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
   );
 }
 
-export default function Dashboard({ trades, onAdds, everyKind, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; onAdds: (k: string) => void; everyKind: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
+export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, perAccount, everyAccount, accountSizes, onSize, all, onDay, onTrade, onImport }: { trades: Trade[]; anyAdds: Trade[]; scope: string; onAdds: (k: string) => void; everyKind: Trade[]; perAccount: Trade[]; everyAccount: Trade[] | null; accountSizes: Record<string, number>; onSize: (account: string, size: number | null) => void; all: Trade[]; onDay: (d: string) => void; onTrade: (id: string) => void; onImport: () => void }) {
   const s = useMemo(() => summarize(trades), [trades]);
   const a = useMemo(() => (everyAccount ? summarize(everyAccount) : null), [everyAccount]);
   // With one account picked, each card also shows the same number across all accounts
@@ -169,7 +169,7 @@ export default function Dashboard({ trades, onAdds, everyKind, perAccount, every
         <Stat all={x(v => money(v.expectancy, true))} label="Expectancy" value={money(s.expectancy, true)} cls={pnlClass(s.expectancy)} sub="Per trade" />
       </div>
 
-      <AddsReport trades={trades} onPick={onAdds} />
+      <AddsReport trades={anyAdds} scope={scope} onPick={onAdds} />
 
       <KindCompare trades={everyKind} />
 
