@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.11.1 — 2026-10-22
+- Year by year shows the number of days traded under Trades.
+
 ## 1.11.0 — 2026-10-22
 - Back and Next buttons in the trade view's pinned header (and the arrow keys) step through trades in the Trades page's order and filters, with "32 of 43".
 - Trade charts always fit the entry and exit lines. When NinjaTrader saved only part of a day, the chart says so instead of pinning orders to the nearest candle.

@@ -10,6 +10,7 @@ const mins = (n: number) => (n >= 60 ? `${(n / 60).toFixed(1)}h` : n >= 1 ? `${n
 // Rows of the year-by-year table: label, value, and which way is better (1 higher, -1 lower, 0 neither)
 const ROWS: [string, (r: Review) => string, (r: Review) => number, number][] = [
   ['Trades', r => String(r.trades), r => r.trades, 0],
+  ['Days traded', r => String(r.days), r => r.days, 0],
   ['Net P&L', r => money(r.net, true), r => r.net, 1],
   ['Win rate', r => pct(r.winRate), r => r.winRate, 1],
   ['Avg win (pts)', r => r.avgWinPts.toFixed(1), r => r.avgWinPts, 1],
