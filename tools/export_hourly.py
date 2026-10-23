@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exports hourly charts for the zoomed-out trade charts (1h, 4h, daily), from NinjaTrader 8's 1-minute price history.
 
-Usage: python3 tools/export_hourly.py "<NinjaTrader 8 folder>"
+Usage: python3 tools/export_hourly.py "<NinjaTrader 8 folder>" [more NT8 folders ...]
 Run after export_bars.py. For every instrument and month with a traded day in public/bars, plus the month before it,
 writes public/bars/<ROOT>/h/<yyyy-mm>.json:
   {"tick": 0.25, "bars": [[unix seconds the hour opened, open, high, low, close, volume], ...]}
@@ -25,11 +25,11 @@ def months_for(root):
     return sorted(out)
 
 
-def day_bars(nt, root, d):
-    """The most-traded contract's minute bars on this Eastern date (the micro's own, else the full-size contract's)"""
+def day_bars(nts, root, d):
+    """The most-traded contract's minute bars on this Eastern date (the micro's own, else the full-size contract's), from any of the folders"""
     for name in (root, FULL.get(root)):
         best = []
-        for p in glob.glob(f'{glob.escape(nt)}/db/minute/{name} *-*/{d:%Y%m%d}.Last.ncd') if name else []:
+        for p in [p for nt in nts for p in glob.glob(f'{glob.escape(nt)}/db/minute/{name} *-*/{d:%Y%m%d}.Last.ncd')] if name else []:
             try:
                 bars = ncd.read(p)
             except (KeyError, IndexError):
@@ -42,14 +42,14 @@ def day_bars(nt, root, d):
 
 
 def main():
-    nt = sys.argv[1]
+    nts = sys.argv[1:]
     for root in sorted(os.listdir(OUT)):
         tick = json.load(open(next(iter(glob.glob(f'{OUT}/{root}/*.json'))))).get('tick') or 0.25
         for y, m in months_for(root):
             hours = {}
             d = datetime.date(y, m, 1)
             while d.month == m:
-                for t, o, h, l, c, v in day_bars(nt, root, d):
+                for t, o, h, l, c, v in day_bars(nts, root, d):
                     k = int((t - datetime.timedelta(minutes=1)).timestamp()) // 3600 * 3600
                     b = hours.get(k)
                     if not b:

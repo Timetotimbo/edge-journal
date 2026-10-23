@@ -1,7 +1,11 @@
 import type { Trade } from '../lib/types';
 import { money, pnlClass } from '../lib/stats';
 
-export const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(', 12:00 AM', '');
+// The year shows when it isn't this year, so Feb 6, 2025 and Feb 6, 2026 can be told apart
+export const when = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }), hour: 'numeric', minute: '2-digit' }).replace(', 12:00 AM', '');
+};
 export const price = (n: number | null) => (n === null ? '–' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 4 }));
 
 export default function TradeRow({ t, onOpen, selected, onSelect }: { t: Trade; onOpen: (id: string) => void; selected?: boolean; onSelect?: (on: boolean) => void }) {

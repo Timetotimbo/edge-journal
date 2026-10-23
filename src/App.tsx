@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
-import { applyFilters, COPIES, RANGES, type Filters } from './lib/filters';
+import { applyFilters, COPIES, RANGES, rangeLabel, yearRanges, type Filters } from './lib/filters';
 import { accountKind, KINDS } from './lib/accounts';
 import { ADD_KINDS } from './lib/adds';
 import Login from './pages/Login';
@@ -66,6 +66,7 @@ export default function App() {
     const account = j.trades.some(t => (t.account || t.broker) === filters.account) ? filters.account : '';
     setFilters({ ...filters, account, range: applyFilters(j.trades, { ...filters, account }).length ? filters.range : 'all' });
   }, [j.trades]); // eslint-disable-line react-hooks/exhaustive-deps
+  const years = useMemo(() => yearRanges(j.trades || []), [j.trades]);
   const accounts = useMemo(() => [...new Set((j.trades || []).map(t => t.account || t.broker))].sort(), [j.trades]);
 
   if (session === undefined) return null;
@@ -97,7 +98,16 @@ export default function App() {
           <div className="flex flex-wrap gap-2">
             <select className="field !w-auto !h-9" value={filters.range} onChange={e => setFilters({ ...filters, range: e.target.value })}>
               {RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              <optgroup label="Year">{years.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</optgroup>
+              <option value="custom">Custom dates…</option>
             </select>
+            {filters.range === 'custom' && (
+              <span className="flex items-center gap-1 text-sm text-mute">
+                <input type="date" aria-label="From" className="field !w-auto !h-9" value={filters.from || ''} onChange={e => setFilters({ ...filters, from: e.target.value })} />
+                to
+                <input type="date" aria-label="To" className="field !w-auto !h-9" value={filters.to || ''} onChange={e => setFilters({ ...filters, to: e.target.value })} />
+              </span>
+            )}
             {kindsPresent.length > 1 && (
               <select className="field !w-auto !h-9" value={filters.kind || ''} onChange={e => setFilters({ ...filters, kind: e.target.value, account: '' })}>
                 <option value="">All account types</option>
@@ -128,7 +138,7 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={[filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), RANGES.find(r => r[0] === filters.range)?.[1].toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ')} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={[filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), rangeLabel(filters).toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ')} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}

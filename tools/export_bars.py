@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Exports 1-minute charts for the days you traded, from NinjaTrader 8's own price history, for the trade charts.
 
-Usage: python3 tools/export_bars.py "<NinjaTrader 8 folder>" executions.csv [more.csv ...]
+Usage: python3 tools/export_bars.py "<NinjaTrader 8 folder>" [more NT8 folders ...] executions.csv [more.csv ...]
+Folders are NinjaTrader 8 folders (this PC's, a copy of the laptop's db); for each day the first folder with a chart wins.
 The CSVs are NinjaTrader executions (Instrument, Time, ...) like the ones imported into the journal. For each instrument
 and US Eastern date in them, writes public/bars/<ROOT>/<yyyy-mm-dd>.json:
   {"contract": "NQ 09-23", "tick": 0.25, "bars": [[unix seconds the bar opened, open, high, low, close, volume], ...]}
@@ -19,7 +20,8 @@ OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'bars')
 
 
 def main():
-    nt, files = sys.argv[1], sys.argv[2:]
+    nts = [a for a in sys.argv[1:] if os.path.isdir(a)]
+    files = [a for a in sys.argv[1:] if not os.path.isdir(a)]
     traded = collections.defaultdict(collections.Counter)  # (root, date) -> contract months traded
     for path in files:
         for r in csv.DictReader(open(path)):
@@ -31,7 +33,7 @@ def main():
     for (root, d), months in sorted(traded.items()):
         bars = None
         for month, _ in months.most_common():
-            for name in (root, FULL.get(root)):
+            for nt, name in ((nt, name) for name in (root, FULL.get(root)) for nt in nts):
                 p = f'{nt}/db/minute/{name} {month}/{d:%Y%m%d}.Last.ncd' if name else ''
                 if p and os.path.exists(p):
                     try:

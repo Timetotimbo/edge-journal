@@ -2,6 +2,11 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.8.0 — 2026-10-22
+- Trades list: filter by instrument and size, and sort by newest, oldest, biggest win or loss, most or fewest points, largest size or longest hold.
+- Dates: the range menu has each year with trades (2026, 2025, …) and "Custom dates…" with From/To. Trade dates show the year when it isn't this year.
+- Charts for the laptop's 2026 trades: tools/export_bars.py and export_hourly.py take several NinjaTrader folders (this PC's and a copy of the laptop's db) and use whichever has each day.
+
 ## 1.7.2 — 2026-10-22
 - The Gospel Trading logo replaces the orange "E" badge in the header and on the sign-in page.
 
