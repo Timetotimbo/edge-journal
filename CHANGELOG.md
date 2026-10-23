@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.12.0 — 2026-10-22
+- Charts line up with your fills again: some NinjaTrader minute files were saved in Central time instead of Eastern (all of the laptop's, and this PC's from about 2025), which put every candle an hour early. tools/ncd.py's read_et() spots them by when volume jumps at the 9:30 Eastern open, and export_bars.py lets each day's fills decide (whichever version puts their prices inside the candles). Fills now land inside their minute's candle about 99% of the time in every year (2026 was 11%). Day types and hourly charts rebuilt.
+
 ## 1.11.1 — 2026-10-22
 - Year by year shows the number of days traded under Trades.
 

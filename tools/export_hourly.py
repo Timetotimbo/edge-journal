@@ -31,7 +31,7 @@ def day_bars(nts, root, d):
         best = []
         for p in [p for nt in nts for p in glob.glob(f'{glob.escape(nt)}/db/minute/{name} *-*/{d:%Y%m%d}.Last.ncd')] if name else []:
             try:
-                bars = ncd.read(p)
+                bars = ncd.read_et(p)
             except (KeyError, IndexError):
                 continue
             if sum(b[5] for b in bars) > sum(b[5] for b in best):

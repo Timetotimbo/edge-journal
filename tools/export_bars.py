@@ -24,14 +24,14 @@ def main():
     nts = [a for a in sys.argv[1:] if os.path.isdir(a)]
     files = [a for a in sys.argv[1:] if not os.path.isdir(a)]
     traded = collections.defaultdict(collections.Counter)  # (root, date) -> contract months traded
-    times = collections.defaultdict(list)  # (root, date) -> when each fill happened
+    times = collections.defaultdict(list)  # (root, date) -> when each fill happened and its price
     for path in files:
         for r in csv.DictReader(open(path)):
             root, month = r['Instrument'].split()
             local = datetime.datetime.strptime(r['Time'], '%m/%d/%Y %I:%M:%S %p').replace(tzinfo=CT)
             d = local.astimezone(ncd.ET).date()  # the chart files are by Eastern date, like NinjaTrader's
             traded[(root, d)][month] += 1
-            times[(root, d)].append(local)
+            times[(root, d)].append((local, float(r['Price'])))
     done = missing = 0
     for (root, d), months in sorted(traded.items()):
         best, score = None, None
@@ -41,15 +41,22 @@ def main():
                 if not (p and os.path.exists(p)):
                     continue
                 try:
-                    b = ncd.read(p)
+                    raw = ncd.read(p)
                 except (KeyError, IndexError):
                     continue
-                if not b:
+                if not raw:
                     continue
-                lo, hi = b[0][0] - datetime.timedelta(minutes=2), b[-1][0] + datetime.timedelta(minutes=1)
-                sc = (sum(lo <= t <= hi for t in times[(root, d)]), len(b))
-                if score is None or sc > score:
-                    best, score = (b, f'{name} {month}'), sc
+                # Saved in Eastern or Central time? Your fills decide: whichever puts their prices inside the candles
+                # (ncd.read_et's volume check when the fills don't settle it)
+                hour = datetime.timedelta(hours=1)
+                guess = ncd.read_et(p)
+                for b in (raw, [(x[0] + hour, *x[1:]) for x in raw]):
+                    at = {x[0]: x for x in b}
+                    fit = sum(1 for t, px in times[(root, d)] if (x := at.get(t.replace(second=0) + datetime.timedelta(minutes=1))) and x[3] - 1e-9 <= px <= x[2] + 1e-9)
+                    lo, hi = b[0][0] - datetime.timedelta(minutes=2), b[-1][0] + datetime.timedelta(minutes=1)
+                    sc = (fit, sum(lo <= t <= hi for t, _ in times[(root, d)]), b[0][0] == guess[0][0], len(b))
+                    if score is None or sc > score:
+                        best, score = (b, f'{name} {month}'), sc
         bars, contract = best if best else (None, None)
         if not bars:
             missing += 1

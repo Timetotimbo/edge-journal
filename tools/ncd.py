@@ -14,6 +14,7 @@ Then one record per bar:
 A bar's time is when it closed.
 """
 import datetime
+import os
 import struct
 from zoneinfo import ZoneInfo
 
@@ -54,4 +55,47 @@ def read(path):
         close = low + close_up
         high = max(o, close) + upper
         bars.append((t.replace(tzinfo=ET), o * tick, high * tick, low * tick, close * tick, v))
+    return bars
+
+
+# Some NinjaTrader installs saved minute files in Central time instead of Eastern (the laptop, and this PC from about
+# Feb 2025), which puts every bar an hour early. A file tells on itself: volume jumps when the stock market opens at
+# 9:30 Eastern, so if the jump at 8:30 (as read) is far bigger than the jump at 9:30, the file is Central.
+_central = {}
+
+
+def _jump(bars, hour):
+    """How much busier the half hour from hour:30 is than the half hour before it, as read"""
+    before = sum(b[5] for b in bars if b[0].hour == hour and b[0].minute <= 30)
+    after = sum(b[5] for b in bars if b[0].hour == hour and b[0].minute > 30)
+    return (after + 1) / (before + 1)
+
+
+def is_central(path):
+    """Whether this minute file was saved in Central time; days without a market open (weekends, half days, files cut
+    short) take the answer from the nearest full day in the same contract folder"""
+    if path in _central:
+        return _central[path]
+    folder, name = os.path.split(path)
+    days = sorted(f for f in os.listdir(folder) if f.endswith('.Last.ncd'))
+    for f in sorted(days, key=lambda f: abs(int(f[:8]) - int(name[:8]))):
+        try:
+            bars = read(os.path.join(folder, f))
+        except (KeyError, IndexError):
+            continue
+        a, b = _jump(bars, 8), _jump(bars, 9)
+        # A clear open only: one jump at least 3x and twice the other (holidays and half days have no real open)
+        if max(a, b) >= 3 and max(a, b) >= 2 * min(a, b) and sum(x[5] for x in bars) > 1000:
+            _central[path] = a > b
+            return _central[path]
+    _central[path] = False
+    return False
+
+
+def read_et(path):
+    """read(), with bars moved an hour later when the file was saved in Central time"""
+    bars = read(path)
+    if bars and is_central(path):
+        hour = datetime.timedelta(hours=1)
+        bars = [(b[0] + hour, *b[1:]) for b in bars]
     return bars
