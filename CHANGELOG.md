@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.8.1 — 2026-10-22
+- Take Profit Trader accounts get their account type: TAKEPROFITPRO… are funded (PRO), TAKEPROFIT… are evaluations (Test). They were all under Other, so 2026 showed no funded trades.
+
 ## 1.8.0 — 2026-10-22
 - Trades list: filter by instrument and size, and sort by newest, oldest, biggest win or loss, most or fewest points, largest size or longest hold.
 - Dates: the range menu has each year with trades (2026, 2025, …) and "Custom dates…" with From/To. Trade dates show the year when it isn't this year.
