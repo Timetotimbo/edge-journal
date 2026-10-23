@@ -18,7 +18,7 @@ export default function Login() {
     <div className="min-h-screen grid place-items-center px-4">
       <form onSubmit={submit} className="card w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center gap-2 text-xl font-extrabold">
-          <span className="w-8 h-8 rounded-lg bg-edge text-black grid place-items-center">E</span>Edge Journal
+          <img src="/gospel-logo.svg" alt="Gospel Trading" className="w-8 h-8" />Edge Journal
         </div>
         <p className="text-sm text-mute">Sign in with your Social Bloom email and password.</p>
         <div><label className="label" htmlFor="email">Email</label><input id="email" className="field" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required /></div>

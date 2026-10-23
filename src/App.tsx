@@ -78,7 +78,7 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
           <button onClick={() => go('dashboard')} className="flex items-center gap-2 font-extrabold tracking-tight">
-            <span className="w-7 h-7 rounded-lg bg-edge text-black grid place-items-center text-sm">E</span>
+            <img src="/gospel-logo.svg" alt="Gospel Trading" className="w-7 h-7" />
             Edge Journal
           </button>
           <nav className="hidden md:flex gap-1 ml-4">
