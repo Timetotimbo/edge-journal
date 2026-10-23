@@ -48,6 +48,9 @@ export default function App() {
   const [filters, setFiltersState] = useState<Filters>(saved);
   const setFilters = (f: Filters) => { setFiltersState(f); try { localStorage.setItem('tj_filters', JSON.stringify(f)); } catch { /* not remembered */ } };
   const [openId, setOpenId] = useState<string | null>(null);
+  // The trades the back and forward buttons step through: the Trades page's list as sorted, else everything shown, newest first
+  const [navIds, setNavIds] = useState<string[] | null>(null);
+  const openFrom = (id: string, list: string[]) => { setNavIds(list); setOpenId(id); };
   const [focusDay, setFocusDay] = useState<string | null>(null);
 
   const shown = useMemo(() => applyFilters(j.trades || [], filters), [j.trades, filters]);
@@ -147,7 +150,7 @@ export default function App() {
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
           : tab === 'progress' ? <Progress every={every} trades={shown} scope={scope} />
           : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={scope} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} subs={j.subs} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
-          : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
+          : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={openFrom} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}
       </main>
@@ -159,7 +162,12 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {open && <TradeDetail trade={open} j={j} onClose={() => setOpenId(null)} />}
+      {open && (() => {
+        const ids = navIds?.includes(open.id) ? navIds : [...shown].sort((a, b) => b.entry_at.localeCompare(a.entry_at)).map(t => t.id);
+        const pos = ids.indexOf(open.id);
+        return <TradeDetail trade={open} j={j} onClose={() => { setOpenId(null); setNavIds(null); }}
+          nav={pos < 0 ? undefined : { pos, count: ids.length, go: by => { const id = ids[pos + by]; if (id) setOpenId(id); } }} />;
+      })()}
     </div>
   );
 }

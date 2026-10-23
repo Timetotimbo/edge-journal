@@ -43,7 +43,7 @@ def day_bars(nts, root, d):
 
 def main():
     nts = sys.argv[1:]
-    for root in sorted(os.listdir(OUT)):
+    for root in sorted(r for r in os.listdir(OUT) if os.path.isdir(f'{OUT}/{r}')):
         tick = json.load(open(next(iter(glob.glob(f'{OUT}/{root}/*.json'))))).get('tick') or 0.25
         for y, m in months_for(root):
             hours = {}

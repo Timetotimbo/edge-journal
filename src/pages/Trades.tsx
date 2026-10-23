@@ -20,7 +20,7 @@ const SORTS: [string, string, (a: Trade, b: Trade) => number][] = [
 const points = (t: Trade) => (t.exit_price === null ? 0 : (t.exit_price - t.entry_price) * (t.side === 'long' ? 1 : -1));
 const held = (t: Trade) => (t.exit_at ? new Date(t.exit_at).getTime() - new Date(t.entry_at).getTime() : 0);
 
-export default function Trades({ trades, j, onOpen }: { trades: Trade[]; j: Journal; onOpen: (id: string) => void }) {
+export default function Trades({ trades, j, onOpen }: { trades: Trade[]; j: Journal; onOpen: (id: string, list: string[]) => void }) {
   const [q, setQ] = useState('');
   const [result, setResult] = useState('');
   const [root, setRoot] = useState('');
@@ -78,7 +78,7 @@ export default function Trades({ trades, j, onOpen }: { trades: Trade[]; j: Jour
         )}
       </div>
       <div className="card px-4 divide-y divide-line">
-        {list.length ? list.map(t => <TradeRow key={t.id} t={t} onOpen={onOpen} selected={picked.has(t.id)} onSelect={on => pick(t.id, on)} />)
+        {list.length ? list.map(t => <TradeRow key={t.id} t={t} onOpen={id => onOpen(id, list.map(x => x.id))} selected={picked.has(t.id)} onSelect={on => pick(t.id, on)} />)
           : <p className="py-6 text-center text-sm text-mute">No trades match.</p>}
       </div>
       {adding && <AddTrade j={j} onClose={() => setAdding(false)} />}

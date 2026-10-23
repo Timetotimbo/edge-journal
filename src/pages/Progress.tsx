@@ -27,6 +27,8 @@ const ROWS: [string, (r: Review) => string, (r: Review) => number, number][] = [
   ['Hold: winners / losers', r => `${mins(r.holdWin)} / ${mins(r.holdLoss)}`, r => (r.holdWin ? r.holdLoss / r.holdWin : 0), -1],
 ];
 
+const MONEY = new Set(['Net P&L', 'Expectancy / trade', 'Max drawdown', 'Worst day']);
+
 function Tile({ label, value, note, cls = '' }: { label: string; value: string; note: string; cls?: string }) {
   return (
     <div className="card p-3">
@@ -58,7 +60,7 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
 
       <section className="space-y-2">
         <h2 className="font-bold">Year by year</h2>
-        <p className="text-xs text-mute">Same filters as above, every year side by side. Green is better than the year before, red is worse. Sharpe needs 10+ trading days.</p>
+        <p className="text-xs text-mute">Same filters as above, every year side by side. ▲ better than the year before, ▼ worse. Dollar amounts are red when negative. Sharpe needs 10+ trading days.</p>
         <div className="card overflow-x-auto">
           <table className="w-full text-sm num">
             <thead><tr className="text-mute text-xs"><th className="text-left font-medium p-2 sticky left-0 bg-card">Metric</th>{years.map(([y]) => <th key={y} className="text-right font-medium p-2">{y}</th>)}</tr></thead>
@@ -68,8 +70,13 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
                   <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">{label}</td>
                   {years.map(([y, yr], i) => {
                     const prev = i ? val(years[i - 1][1]) : null, now = val(yr);
-                    const cls = !dir || prev === null || !Number.isFinite(now) || !Number.isFinite(prev) || now === prev ? '' : (now - prev) * dir > 0 ? 'text-win' : 'text-loss';
-                    return <td key={y} className={`p-2 text-right whitespace-nowrap ${cls}`}>{show(yr)}</td>;
+                    // Arrow: better (▲ green) or worse (▼ red) than the year before; money keeps its own colour (red when negative)
+                    const trend = !dir || prev === null || !Number.isFinite(now) || !Number.isFinite(prev) || now === prev ? 0 : (now - prev) * dir > 0 ? 1 : -1;
+                    return (
+                      <td key={y} className={`p-2 text-right whitespace-nowrap ${MONEY.has(label) ? pnlClass(now) : ''}`}>
+                        {show(yr)}{trend !== 0 && <span className={`ml-1 text-[10px] ${trend > 0 ? 'text-win' : 'text-loss'}`} aria-label={trend > 0 ? 'better' : 'worse'}>{trend > 0 ? '▲' : '▼'}</span>}
+                      </td>
+                    );
                   })}
                 </tr>
               ))}

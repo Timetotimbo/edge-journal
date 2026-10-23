@@ -55,6 +55,8 @@ export default function TradeChart({ t }: { t: Trade }) {
   const [frame, setFrame] = useState(1);
   const [state, setState] = useState<'loading' | 'none' | 'ok'>('loading');
   const [contract, setContract] = useState('');
+  // When NinjaTrader's history stops before (or starts after) the trade: the last or first bar it has
+  const [gap, setGap] = useState('');
 
   useEffect(() => {
     let chart: IChartApi | null = null;
@@ -79,6 +81,11 @@ export default function TradeChart({ t }: { t: Trade }) {
         else { b[2] = Math.max(b[2], h); b[3] = Math.min(b[3], l); b[4] = c; b[5] += v; }
       }
       const bars = [...agg.values()].sort((a, b) => a[0] - b[0]);
+      // Orders outside the bars' time span can't be placed on a candle: say so instead of pinning them to the nearest one
+      const first = bars[0]?.[0] ?? 0, last = (bars[bars.length - 1]?.[0] ?? 0) + sec;
+      const inside = (iso: string) => { const ts = new Date(iso).getTime() / 1000; return ts >= first - 60 && ts <= last + 60; };
+      const clock = (ts: number) => new Date(ts * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      setGap(orders(t).every(o => inside(o.at)) ? '' : `NinjaTrader's saved history for this day runs ${clock(first)} to ${clock(last)}, so the candles at the time of this trade are missing. The entry and exit lines are still drawn.`);
       const daily = frame === DAY;
       const at = (s: number) => (daily ? s : local(s)) as UTCTimestamp;
       const tick0 = (files[0] || hourly[0]).tick;
@@ -94,10 +101,17 @@ export default function TradeChart({ t }: { t: Trade }) {
         timeScale: { borderColor: css('--line'), timeVisible: !daily, secondsVisible: false, rightOffset: 12 },
         crosshair: { mode: CrosshairMode.Normal },
       });
+      // The price scale always takes in the entry and exit prices, so both lines stay on screen
+      const keep = [Number(t.entry_price), ...(t.exit_price !== null ? [Number(t.exit_price)] : [])];
       const s = chart.addCandlestickSeries({ upColor: win, downColor: loss, wickUpColor: win, wickDownColor: loss, borderVisible: false,
+        autoscaleInfoProvider: (base: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
+          const r = base();
+          if (!r) return r;
+          return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...keep), maxValue: Math.max(r.priceRange.maxValue, ...keep) } };
+        },
         priceFormat: { type: 'price', minMove: tick0 || 0.01, precision: (String(tick0 || 0.01).split('.')[1] || '').length } });
       s.setData(bars.map(([ts, o, h, l, c]) => ({ time: at(ts), open: o, high: h, low: l, close: c })));
-      const marks = orders(t).map(o => ({ ...o, time: bucket(Math.floor(new Date(o.at).getTime() / 1000), sec) }));
+      const marks = orders(t).filter(o => inside(o.at)).map(o => ({ ...o, time: bucket(Math.floor(new Date(o.at).getTime() / 1000), sec) }));
       s.setMarkers(marks.sort((a, b) => a.time - b.time).map(m => ({
         time: at(m.time), position: m.buy ? 'belowBar' : 'aboveBar', color: m.buy ? win : loss, shape: m.buy ? 'arrowUp' : 'arrowDown',
         text: m.what,
@@ -124,6 +138,7 @@ export default function TradeChart({ t }: { t: Trade }) {
           ))}
         </div>
       </div>
+      {gap && <p className="text-[11px] text-loss mb-1.5">{gap}</p>}
       <div ref={box} className="card h-72 md:h-80 overflow-hidden">{state === 'loading' && <div className="h-full grid place-items-center text-xs text-mute">Loading chart…</div>}</div>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] num">
         {orders(t).map(o => (

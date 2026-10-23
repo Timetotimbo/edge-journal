@@ -2,6 +2,12 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.11.0 — 2026-10-22
+- Back and Next buttons in the trade view's pinned header (and the arrow keys) step through trades in the Trades page's order and filters, with "32 of 43".
+- Trade charts always fit the entry and exit lines. When NinjaTrader saved only part of a day, the chart says so instead of pinning orders to the nearest candle.
+- tools/export_bars.py picks the contract file that covers the most of each day's trades (often the full-size NQ for an MNQ day): trades outside their chart's data fell from 124 to 48.
+- Year by year: ▲/▼ show better or worse than the year before, and dollar amounts are red when negative (a smaller drawdown was showing as a green negative number).
+
 ## 1.10.0 — 2026-10-22
 - Progress tab: a verdict, every year side by side (net, win rate, average win and loss in points, payoff, win rate needed, profit factor, expectancy, Sharpe, Sortino, max drawdown, green days, worst day, hold times; green or red against the year before), a desk report (Sharpe, Sortino, profit factor, payoff, drawdown and recovery, worst 5% of days, consistency, tail losses, expectancy, Kelly) and a coach that prices each habit in dollars against the rest of your trades: losses bigger than wins, a hard-stop what-if, holding losers, adding to losers, trades right after a loss, trades after the third of the day, worst hours and weekday, trend-day fades, range days, oversized positions, longs vs shorts.
 - tools/export_daytypes.py labels each traded day trend, range or mixed (public/bars/days.json) for the coach.

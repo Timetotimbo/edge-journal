@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ImagePlus, Star, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ImagePlus, Star, Trash2, X } from 'lucide-react';
 import type { Trade } from '../lib/types';
 import type { Journal } from '../lib/store';
 import { supabase } from '../lib/supabase';
@@ -28,7 +28,10 @@ function Chips({ options, value, onChange, tone = 'edge' }: { options: string[];
   );
 }
 
-export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j: Journal; onClose: () => void }) {
+/** nav: the list being browsed (the Trades page's order and filters), for the back and forward buttons */
+export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trade; j: Journal; onClose: () => void; nav?: { pos: number; count: number; go: (by: number) => void } }) {
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [t.id]);
   const [notes, setNotes] = useState(t.notes || '');
   const [setup, setSetup] = useState(t.setup || '');
   const [err, setErr] = useState('');
@@ -36,11 +39,16 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
   const [uploading, setUploading] = useState(false);
   useEffect(() => { setNotes(t.notes || ''); setSetup(t.setup || ''); }, [t.id]);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      // Arrow keys step through trades, unless typing in a note or field
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName || '');
+      if (nav && !typing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) nav.go(e.key === 'ArrowLeft' ? -1 : 1);
+    };
     addEventListener('keydown', h);
     document.body.style.overflow = 'hidden';
     return () => { removeEventListener('keydown', h); document.body.style.overflow = ''; };
-  }, [onClose]);
+  }, [onClose, nav]);
   // Screenshots are private: short-lived links to show them
   useEffect(() => {
     if (!t.shots.length) return;
@@ -80,8 +88,9 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center" onClick={onClose}
       onPaste={e => { const fs = Array.from(e.clipboardData.files); if (fs.length) void upload(fs); }}>
-      <div className="bg-bg border border-line w-full md:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl md:rounded-2xl" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-bg/95 backdrop-blur border-b border-line px-4 py-3 flex items-center gap-3">
+      <div ref={scroller} className="bg-bg border border-line w-full md:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl md:rounded-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur border-b border-line">
+        <div className="px-4 py-3 flex items-center gap-3">
           <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${t.side === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}`}>{t.side.toUpperCase()}</span>
           <div className="min-w-0">
             <div className="font-bold truncate">{t.symbol} ×{Number(t.qty)}</div>
@@ -89,6 +98,14 @@ export default function TradeDetail({ trade: t, j, onClose }: { trade: Trade; j:
           </div>
           <span className={`ml-auto num text-lg font-extrabold ${pnlClass(t.net_pnl)}`}>{money(Number(t.net_pnl), true)}</span>
           <button onClick={onClose} className="text-mute hover:text-ink" aria-label="Close"><X className="w-5 h-5" /></button>
+        </div>
+        {nav && nav.count > 1 && (
+          <div className="px-2 pb-2 flex items-center gap-2 text-sm">
+            <button className="btn-line !h-9 flex-1" disabled={nav.pos === 0} onClick={() => nav.go(-1)} aria-label="Previous trade"><ChevronLeft className="w-4 h-4" />Back</button>
+            <span className="text-xs text-mute num whitespace-nowrap px-1">{nav.pos + 1} of {nav.count}</span>
+            <button className="btn-line !h-9 flex-1" disabled={nav.pos === nav.count - 1} onClick={() => nav.go(1)} aria-label="Next trade">Next<ChevronRight className="w-4 h-4" /></button>
+          </div>
+        )}
         </div>
 
         <div className="p-4 space-y-5">
