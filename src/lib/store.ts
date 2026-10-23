@@ -10,6 +10,8 @@ export function useJournal(userId: string | undefined) {
   const [days, setDays] = useState<Record<string, Day>>({});
   // Sizes the user set on their accounts (50K, 300K…)
   const [sizes, setSizes] = useState<Record<string, number>>({});
+  // Prop accounts that were resets of one subscription: account → the subscription it belongs to and when it was reset
+  const [subs, setSubs] = useState<Record<string, { subscription: string; reset_at: string | null }>>({});
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -27,8 +29,9 @@ export function useJournal(userId: string | undefined) {
     setTrades(all);
     const { data: d } = await supabase.from('tj_days').select('day, plan, review, mood');
     setDays(Object.fromEntries((d || []).map((x: Day) => [x.day, x])));
-    const { data: a } = await supabase.from('tj_accounts').select('account, size');
+    const { data: a } = await supabase.from('tj_accounts').select('account, size, subscription, reset_at');
     setSizes(Object.fromEntries((a || []).filter((x: { size: number | null }) => x.size).map((x: { account: string; size: number }) => [x.account, Number(x.size)])));
+    setSubs(Object.fromEntries((a || []).filter((x: { subscription: string | null }) => x.subscription).map((x: { account: string; subscription: string; reset_at: string | null }) => [x.account, { subscription: x.subscription, reset_at: x.reset_at }])));
   }, [userId]);
   useEffect(() => { void load(); }, [load]);
 
@@ -66,6 +69,6 @@ export function useJournal(userId: string | undefined) {
     if (error) throw new Error(error.message);
   };
 
-  return { trades, days, sizes, error, reload: load, saveTrade, deleteTrades, addTrades, saveDay, saveSize };
+  return { trades, days, sizes, subs, error, reload: load, saveTrade, deleteTrades, addTrades, saveDay, saveSize };
 }
 export type Journal = ReturnType<typeof useJournal>;

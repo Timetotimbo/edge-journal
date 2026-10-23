@@ -2,6 +2,11 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.10.0 — 2026-10-22
+- Progress tab: a verdict, every year side by side (net, win rate, average win and loss in points, payoff, win rate needed, profit factor, expectancy, Sharpe, Sortino, max drawdown, green days, worst day, hold times; green or red against the year before), a desk report (Sharpe, Sortino, profit factor, payoff, drawdown and recovery, worst 5% of days, consistency, tail losses, expectancy, Kelly) and a coach that prices each habit in dollars against the rest of your trades: losses bigger than wins, a hard-stop what-if, holding losers, adding to losers, trades right after a loss, trades after the third of the day, worst hours and weekday, trend-day fades, range days, oversized positions, longs vs shorts.
+- tools/export_daytypes.py labels each traded day trend, range or mixed (public/bars/days.json) for the coach.
+- Subscriptions and resets on the dashboard: each prop subscription with its resets as one line, from tj_accounts.subscription and reset_at (Take Profit Trader PRO chains and sizes saved).
+
 ## 1.9.0 — 2026-10-22
 - Colour themes: a palette button in the header picks Edge (match device, dark, light), Voice Bible's dark themes (Purple Night, Midnight Blue, Forest, Rose) or its neon ones (Neon Book, Neon Pink, Neon Purple, Neon Blue, Electric Blue, Neon Green, Neon Orange, Synthwave), with a glow on neon. Remembered on each device.
 - Chart tooltips on the dashboard have their border again.

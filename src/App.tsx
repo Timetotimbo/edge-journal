@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
+import { BarChart3, BookOpen, List, LogOut, TrendingUp, Upload } from 'lucide-react';
 import ThemePicker from './components/ThemePicker';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
@@ -10,12 +10,14 @@ import { ADD_KINDS } from './lib/adds';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Trades from './pages/Trades';
+import Progress from './pages/Progress';
 import JournalPage from './pages/JournalPage';
 import Import from './pages/Import';
 import TradeDetail from './components/TradeDetail';
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'trades', label: 'Trades', icon: List },
   { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'import', label: 'Import', icon: Upload },
@@ -68,6 +70,9 @@ export default function App() {
     setFilters({ ...filters, account, range: applyFilters(j.trades, { ...filters, account }).length ? filters.range : 'all' });
   }, [j.trades]); // eslint-disable-line react-hooks/exhaustive-deps
   const years = useMemo(() => yearRanges(j.trades || []), [j.trades]);
+  // Every date with the other filters, for the Progress page's year-by-year table
+  const every = useMemo(() => applyFilters(j.trades || [], { ...filters, range: 'all' }), [j.trades, filters]);
+  const scope = [filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), rangeLabel(filters).toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ');
   const accounts = useMemo(() => [...new Set((j.trades || []).map(t => t.account || t.broker))].sort(), [j.trades]);
 
   if (session === undefined) return null;
@@ -96,7 +101,7 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-4 space-y-4">
         {j.error && <p className="card p-3 text-sm text-loss">{j.error}</p>}
-        {(tab === 'dashboard' || tab === 'trades') && (
+        {(tab === 'dashboard' || tab === 'trades' || tab === 'progress') && (
           <div className="flex flex-wrap gap-2">
             <select className="field !w-auto !h-9" value={filters.range} onChange={e => setFilters({ ...filters, range: e.target.value })}>
               {RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -140,13 +145,14 @@ export default function App() {
           </div>
         )}
         {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
-          : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={[filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), rangeLabel(filters).toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ')} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
+          : tab === 'progress' ? <Progress every={every} trades={shown} scope={scope} />
+          : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={scope} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} subs={j.subs} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={setOpenId} />
           : tab === 'journal' ? <JournalPage j={j} focus={focusDay} onTrade={setOpenId} />
           : <Import j={j} onDone={() => go('trades')} />}
       </main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-bg/95 backdrop-blur grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-bg/95 backdrop-blur grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
         {TABS.map(t => (
           <button key={t.id} onClick={() => go(t.id)} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${tab === t.id ? 'text-edge' : 'text-mute'}`}>
             <t.icon className="w-5 h-5" />{t.label}
