@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { BarChart3, BookOpen, List, LogOut, Upload } from 'lucide-react';
+import ThemePicker from './components/ThemePicker';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
 import { applyFilters, COPIES, RANGES, rangeLabel, yearRanges, type Filters } from './lib/filters';
@@ -88,6 +89,7 @@ export default function App() {
             ))}
           </nav>
           <span className="ml-auto text-[11px] text-mute">v{__APP_VERSION__}</span>
+          <ThemePicker />
           <button onClick={() => void supabase.auth.signOut()} title="Sign out" className="text-mute hover:text-ink"><LogOut className="w-4 h-4" /></button>
         </div>
       </header>

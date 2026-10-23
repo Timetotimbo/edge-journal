@@ -4,11 +4,11 @@
 
 :root {
   --bg: 11 13 18; --card: 19 22 30; --line: 35 40 54; --ink: 238 240 245; --mute: 139 147 167;
-  --edge: 255 138 31; --win: 34 197 94; --loss: 244 63 94;
+  --edge: 255 138 31; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
+  :root:not([data-theme]) {
     --bg: 245 246 248; --card: 255 255 255; --line: 227 230 236; --ink: 18 21 28; --mute: 93 101 119;
     --edge: 232 114 12; --win: 22 163 74; --loss: 225 29 72;
     color-scheme: light;
@@ -19,11 +19,77 @@
   --edge: 232 114 12; --win: 22 163 74; --loss: 225 29 72;
   color-scheme: light;
 }
+/* Themes picked in the header (src/lib/theme.ts). Dark and neon ones come from Voice Bible. --on-edge is text on accent buttons. */
+:root[data-theme="purple"] {
+  --bg: 10 7 16; --card: 21 15 34; --line: 46 33 71; --ink: 236 230 248; --mute: 164 152 189;
+  --edge: 155 109 255; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="midnight"] {
+  --bg: 7 11 20; --card: 15 22 38; --line: 36 50 79; --ink: 230 236 248; --mute: 147 161 189;
+  --edge: 91 140 255; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="forest"] {
+  --bg: 7 16 11; --card: 14 26 19; --line: 34 57 43; --ink: 227 241 232; --mute: 147 179 160;
+  --edge: 63 191 127; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="rose"] {
+  --bg: 18 10 12; --card: 29 17 21; --line: 61 34 41; --ink: 246 231 234; --mute: 191 154 163;
+  --edge: 224 102 127; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-book"] {
+  --bg: 9 5 15; --card: 19 11 31; --line: 45 29 72; --ink: 242 234 255; --mute: 179 163 207;
+  --edge: 255 63 216; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-pink"] {
+  --bg: 10 4 16; --card: 20 10 28; --line: 58 26 74; --ink: 251 233 255; --mute: 185 143 198;
+  --edge: 255 43 214; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-purple"] {
+  --bg: 8 3 15; --card: 18 7 32; --line: 54 24 90; --ink: 243 232 255; --mute: 171 147 201;
+  --edge: 176 38 255; --on-edge: 255 255 255; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-royal"] {
+  --bg: 3 5 15; --card: 8 13 31; --line: 27 40 82; --ink: 230 236 255; --mute: 143 156 198;
+  --edge: 31 81 255; --on-edge: 255 255 255; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-blue"] {
+  --bg: 3 10 16; --card: 8 20 29; --line: 22 58 79; --ink: 228 251 255; --mute: 141 184 198;
+  --edge: 0 229 255; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-green"] {
+  --bg: 4 10 5; --card: 10 20 12; --line: 29 61 34; --ink: 230 255 233; --mute: 143 191 150;
+  --edge: 57 255 20; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-orange"] {
+  --bg: 15 7 3; --card: 26 13 6; --line: 74 37 18; --ink: 255 240 230; --mute: 199 157 133;
+  --edge: 255 122 24; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+:root[data-theme="neon-synth"] {
+  --bg: 13 5 32; --card: 23 10 51; --line: 61 31 110; --ink: 247 234 255; --mute: 176 154 208;
+  --edge: 255 43 214; --on-edge: 0 0 0; --win: 34 197 94; --loss: 244 63 94;
+  color-scheme: dark;
+}
+/* Neon: the accent glows on buttons, the active tab and focused fields */
+:root[data-theme^="neon"] .btn-edge { box-shadow: 0 0 14px rgb(var(--edge) / 0.55); }
+:root[data-theme^="neon"] .field:focus { box-shadow: 0 0 0 1px rgb(var(--edge)), 0 0 12px rgb(var(--edge) / 0.4); }
+:root[data-theme^="neon"] header { box-shadow: 0 1px 16px rgb(var(--edge) / 0.18); }
+:root[data-theme="neon-synth"] .card { border-color: rgb(var(--edge) / 0.25); }
 html, body { background: rgb(var(--bg)); color: rgb(var(--ink)); overflow-x: clip; }
 body { font-family: Inter, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
 .card { @apply bg-card border border-line rounded-xl; }
 .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold transition disabled:opacity-50; }
-.btn-edge { @apply btn bg-edge text-black hover:brightness-110; }
+.btn-edge { @apply btn bg-edge hover:brightness-110; color: rgb(var(--on-edge)); }
 .btn-line { @apply btn border border-line hover:bg-line/50; }
 .field { @apply w-full rounded-lg border border-line bg-bg px-3 h-10 text-sm outline-none focus:border-edge; }
 .label { @apply block text-xs font-medium text-mute mb-1; }

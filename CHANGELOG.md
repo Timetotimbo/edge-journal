@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.9.0 — 2026-10-22
+- Colour themes: a palette button in the header picks Edge (match device, dark, light), Voice Bible's dark themes (Purple Night, Midnight Blue, Forest, Rose) or its neon ones (Neon Book, Neon Pink, Neon Purple, Neon Blue, Electric Blue, Neon Green, Neon Orange, Synthwave), with a glow on neon. Remembered on each device.
+- Chart tooltips on the dashboard have their border again.
+
 ## 1.8.2 — 2026-10-22
 - Account 1710563 (Take Profit Trader PRO+, a live account with a number for a name) counts as funded.
 

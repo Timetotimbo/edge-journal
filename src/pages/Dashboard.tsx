@@ -100,7 +100,7 @@ function Bars({ title, data }: { title: string; data: { name: string; net: numbe
           <BarChart data={data} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
             <XAxis dataKey="name" tick={{ fill: 'rgb(var(--mute))', fontSize: 11 }} axisLine={false} tickLine={false} interval={0} />
             <YAxis hide />
-            <Tooltip cursor={{ fill: 'rgb(var(--line))' }} contentStyle={{ background: 'rgb(var(--card))', border: '1px solid var(--line)', borderRadius: 8 }} formatter={(v: number) => money(v, true)} />
+            <Tooltip cursor={{ fill: 'rgb(var(--line))' }} contentStyle={{ background: 'rgb(var(--card))', border: '1px solid rgb(var(--line))', borderRadius: 8 }} formatter={(v: number) => money(v, true)} />
             <Bar dataKey="net" radius={[4, 4, 4, 4]}>
               {data.map((d, i) => <Cell key={i} fill={d.net >= 0 ? 'rgb(var(--win))' : 'rgb(var(--loss))'} />)}
             </Bar>
@@ -188,7 +188,7 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
               </defs>
               <XAxis dataKey="day" tick={{ fill: 'rgb(var(--mute))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={d => d.slice(5).replace('-', '/')} minTickGap={24} />
               <YAxis tick={{ fill: 'rgb(var(--mute))', fontSize: 11 }} axisLine={false} tickLine={false} width={56} tickFormatter={v => money(v).replace('.00', '')} />
-              <Tooltip contentStyle={{ background: 'rgb(var(--card))', border: '1px solid var(--line)', borderRadius: 8 }} formatter={(v: number, n) => [money(v, true), n === 'total' ? 'Total' : 'Day']} />
+              <Tooltip contentStyle={{ background: 'rgb(var(--card))', border: '1px solid rgb(var(--line))', borderRadius: 8 }} formatter={(v: number, n) => [money(v, true), n === 'total' ? 'Total' : 'Day']} />
               <Area type="monotone" dataKey="total" stroke="rgb(var(--edge))" strokeWidth={2} fill="url(#eq)" />
             </AreaChart>
           </ResponsiveContainer>
