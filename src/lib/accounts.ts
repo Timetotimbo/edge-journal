@@ -34,8 +34,11 @@ export function estimateSize(account: string, trades: Trade[]): number | null {
 /** Funded (Apex PA-, Bulenox BX-M…, Take Profit Trader PRO), evaluation (Apex APEX-, Bulenox BX…, Take Profit Trader Test), sim (Sim…, Playback) or other */
 export type AccountKind = 'funded' | 'eval' | 'sim' | 'other';
 export const KINDS: [AccountKind, string][] = [['funded', 'Funded (PA / Bulenox M / TPT PRO)'], ['eval', 'Evaluation'], ['sim', 'Sim'], ['other', 'Other']];
+// Accounts whose names don't say which firm they're from: 1710563 is a Take Profit Trader live (PRO+) account
+const KNOWN: Record<string, AccountKind> = { '1710563': 'funded' };
 export function accountKind(account: string | null): AccountKind {
   const a = (account || '').toUpperCase();
+  if (KNOWN[a]) return KNOWN[a];
   if (/^PA-APEX/.test(a) || /^BX-M/.test(a) || /^TAKEPROFITPRO/.test(a)) return 'funded';
   if (/^APEX-/.test(a) || /^BX\d/.test(a) || /^TAKEPROFIT\d/.test(a)) return 'eval';
   if (/^SIM|PLAYBACK|BACKTEST/.test(a)) return 'sim';

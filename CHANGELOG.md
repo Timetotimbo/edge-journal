@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.8.2 — 2026-10-22
+- Account 1710563 (Take Profit Trader PRO+, a live account with a number for a name) counts as funded.
+
 ## 1.8.1 — 2026-10-22
 - Take Profit Trader accounts get their account type: TAKEPROFITPRO… are funded (PRO), TAKEPROFIT… are evaluations (Test). They were all under Other, so 2026 showed no funded trades.
 
