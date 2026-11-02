@@ -85,5 +85,8 @@ export type StudyItem = {
   media_path: string | null;
   content: string;
   chunk_index: number;
+  start_sec: number | null;
+  end_sec: number | null;
+  saved: boolean;
 };
-export type StudySource = { id: string; batchId: string; kind: StudyKind; mediaType: StudyMedia; label: string; sourceUrl: string | null; day: string | null; mediaPath: string | null; snippet: string };
+export type StudySource = { id: string; batchId: string; kind: StudyKind; mediaType: StudyMedia; label: string; sourceUrl: string | null; day: string | null; mediaPath: string | null; startSec: number | null; endSec: number | null; saved: boolean; snippet: string };

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, FileText, Image, Mic, Search, Trash2, Video } from 'lucide-react';
+import { ExternalLink, FileText, Image, Mic, Search, Star, Trash2, Video } from 'lucide-react';
 import { signedUrls, useStudy, type Study } from '../lib/study';
 import type { StudyKind, StudyMedia, StudySource, StudyItem } from '../lib/types';
 import { dayOf } from '../lib/stats';
+
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 
 const on = 'border-edge bg-edge/15 text-edge', off = 'border-line text-mute';
 const KIND_LABEL: Record<StudyKind, string> = { mentor: 'Mentor', own: 'My day' };
@@ -11,14 +13,16 @@ const MEDIA_ICON = Object.fromEntries(MEDIA.map(([m, , I]) => [m, I])) as Record
 const VIDEO_WARN = 150 * 1048576, VIDEO_MAX = 200 * 1048576, IMAGE_MAX = 10 * 1048576, AUDIO_MAX = 25 * 1048576;
 const niceDay = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-/** A screenshot thumbnail, video or voice-note player for a private study file. */
-function Media({ type, path, urls }: { type: StudyMedia; path: string | null; urls: Record<string, string> }) {
+/** A screenshot thumbnail, video or voice-note player for a private study file. Video/audio start at `start` (a
+    chunk's matched moment) via the #t= media-fragment, which most browsers honor on load. */
+function Media({ type, path, urls, start }: { type: StudyMedia; path: string | null; urls: Record<string, string>; start?: number | null }) {
   const u = path ? urls[path] : '';
   if (!path) return null;
   if (!u) return <div className="rounded-lg border border-line aspect-video" />;
+  const seek = start && start > 0 ? `#t=${Math.floor(start)}` : '';
   if (type === 'screenshot') return <a href={u} target="_blank" rel="noreferrer"><img src={u} alt="Screenshot" className="rounded-lg border border-line w-full aspect-video object-cover" /></a>;
-  if (type === 'video') return <video src={u} controls preload="metadata" className="rounded-lg border border-line w-full aspect-video bg-black" />;
-  if (type === 'audio') return <audio src={u} controls preload="none" className="w-full" />;
+  if (type === 'video') return <video src={u + seek} controls preload="metadata" className="rounded-lg border border-line w-full aspect-video bg-black" />;
+  if (type === 'audio') return <audio src={u + seek} controls preload="none" className="w-full" />;
   return null;
 }
 
@@ -39,14 +43,21 @@ function Ask({ study, kind, from, to }: { study: Study; kind: StudyKind | ''; fr
   const [err, setErr] = useState('');
   const [res, setRes] = useState<{ answer: string; sources: StudySource[] } | null>(null);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
   const submit = async () => {
     if (!q.trim()) return;
     setBusy(true); setErr(''); setRes(null);
     try {
       const r = await study.ask(q.trim(), kind || undefined, from, to);
       setRes(r);
-      setUrls(await signedUrls([...new Set(r.sources.filter(s => s.mediaPath && s.mediaType === 'screenshot').map(s => s.mediaPath as string))]));
+      setSaved(Object.fromEntries(r.sources.map(s => [s.id, s.saved])));
+      setUrls(await signedUrls([...new Set(r.sources.filter(s => s.mediaPath).map(s => s.mediaPath as string))]));
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
+  const star = async (s: StudySource) => {
+    const next = !saved[s.id];
+    setSaved(x => ({ ...x, [s.id]: next })); // optimistic
+    try { await study.toggleSave(s.id, next); } catch (e) { setSaved(x => ({ ...x, [s.id]: !next })); setErr(e instanceof Error ? e.message : String(e)); }
   };
   return (
     <section className="card p-4 space-y-3">
@@ -60,23 +71,66 @@ function Ask({ study, kind, from, to }: { study: Study; kind: StudyKind | ''; fr
           <p className="text-sm whitespace-pre-wrap">{res.answer}</p>
           {res.sources.length > 0 && (
             <div>
-              <div className="label">Sources</div>
+              <div className="label">Sources — star one to save it as a clip</div>
               <div className="grid md:grid-cols-2 gap-2">
                 {res.sources.map((s, i) => (
                   <div key={s.id} className="rounded-lg border border-line p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-mute">[{i + 1}]</span>
                       <span className="font-semibold text-sm truncate">{s.label}</span>
-                      {s.sourceUrl && <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="ml-auto text-mute hover:text-ink" aria-label="Open source"><ExternalLink className="w-3.5 h-3.5" /></a>}
+                      <span className="ml-auto flex items-center gap-2">
+                        {s.sourceUrl && <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-mute hover:text-ink" aria-label="Open source"><ExternalLink className="w-3.5 h-3.5" /></a>}
+                        <button onClick={() => void star(s)} className={saved[s.id] ? 'text-edge' : 'text-mute hover:text-edge'} aria-label={saved[s.id] ? 'Saved as a clip — tap to unsave' : 'Save as a clip'}>
+                          <Star className="w-3.5 h-3.5" fill={saved[s.id] ? 'currentColor' : 'none'} />
+                        </button>
+                      </span>
                     </div>
                     <Badges kind={s.kind} mediaType={s.mediaType} day={s.day} />
-                    {s.mediaType === 'screenshot' && <Media type="screenshot" path={s.mediaPath} urls={urls} />}
+                    {s.mediaPath && <Media type={s.mediaType} path={s.mediaPath} urls={urls} start={s.startSec} />}
+                    {s.startSec != null && <p className="text-[11px] text-mute">Starts around {mmss(s.startSec)}</p>}
                     <p className="text-xs text-mute whitespace-pre-wrap">{s.snippet}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Starred chunks (clips/nuggets) across every upload, the way Audible's clips collect saved passages. */
+function Clips({ study }: { study: Study }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [err, setErr] = useState('');
+  useEffect(() => { void study.loadClips(); }, [study.loadClips]);
+  const list = study.clips || [];
+  const paths = useMemo(() => list.map(i => i.media_path).filter((p): p is string => !!p && !urls[p]), [list, urls]);
+  useEffect(() => { if (paths.length) void signedUrls(paths).then(u => setUrls(x => ({ ...x, ...u }))); }, [paths]);
+  const unsave = (i: StudyItem) => study.toggleSave(i.id, false).catch(e => setErr(e instanceof Error ? e.message : String(e)));
+  if (study.clips !== null && !list.length) return null;
+  return (
+    <section className="card p-4 space-y-3">
+      <h3 className="font-bold">Your clips</h3>
+      {err && <p className="text-sm text-loss">{err}</p>}
+      {study.clips === null ? <p className="text-mute text-sm">Loading…</p> : (
+        <div className="grid md:grid-cols-2 gap-2">
+          {list.map(i => (
+            <div key={i.id} className="rounded-lg border border-line p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm truncate">{i.label}</span>
+                <span className="ml-auto flex items-center gap-2">
+                  {i.source_url && <a href={i.source_url} target="_blank" rel="noreferrer" className="text-mute hover:text-ink" aria-label="Open source"><ExternalLink className="w-3.5 h-3.5" /></a>}
+                  <button onClick={() => unsave(i)} className="text-edge" aria-label="Unsave"><Star className="w-3.5 h-3.5" fill="currentColor" /></button>
+                </span>
+              </div>
+              <Badges kind={i.kind} mediaType={i.media_type} day={i.day} />
+              {i.media_path && <Media type={i.media_type} path={i.media_path} urls={urls} start={i.start_sec} />}
+              {i.start_sec != null && <p className="text-[11px] text-mute">Starts around {mmss(i.start_sec)}</p>}
+              {i.content && <p className="text-xs text-mute line-clamp-4 whitespace-pre-wrap">{i.content}</p>}
+            </div>
+          ))}
         </div>
       )}
     </section>
@@ -236,6 +290,7 @@ export default function StudyPage({ userId }: { userId: string }) {
       </div>
       {study.error && <p className="text-sm text-loss">{study.error}</p>}
       <Ask study={study} kind={kind} from={kind === 'own' ? from : ''} to={kind === 'own' ? to : ''} />
+      <Clips study={study} />
       <Add study={study} />
       <Library study={study} kind={kind} from={kind === 'own' ? from : ''} to={kind === 'own' ? to : ''} />
     </div>

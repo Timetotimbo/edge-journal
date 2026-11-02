@@ -24,9 +24,12 @@ export const fileType = (f: File) => { const t = f.type.split(';')[0]; return MI
 
 export type Ingest = { kind: StudyKind; mediaType: StudyMedia; label: string; sourceUrl?: string; day?: string; text?: string; file?: File };
 
+const COLUMNS = 'id, batch_id, created_at, kind, media_type, label, source_url, day, media_path, content, chunk_index, start_sec, end_sec, saved';
+
 /** The study library (one row per upload: each batch's first chunk), loaded once and kept in step with adds and deletes. */
 export function useStudy(userId: string | undefined) {
   const [items, setItems] = useState<StudyItem[] | null>(null);
+  const [clips, setClips] = useState<StudyItem[] | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -34,8 +37,7 @@ export function useStudy(userId: string | undefined) {
     const all: StudyItem[] = [];
     for (let from = 0; ; from += 1000) {
       const { data, error } = await supabase.from('tj_study_items')
-        .select('id, batch_id, created_at, kind, media_type, label, source_url, day, media_path, content, chunk_index')
-        .eq('chunk_index', 0).order('created_at', { ascending: false }).range(from, from + 999);
+        .select(COLUMNS).eq('chunk_index', 0).order('created_at', { ascending: false }).range(from, from + 999);
       if (error) { setError(error.message); return; }
       all.push(...(data as StudyItem[]));
       if (!data || data.length < 1000) break;
@@ -43,6 +45,22 @@ export function useStudy(userId: string | undefined) {
     setItems(all);
   }, [userId]);
   useEffect(() => { void load(); }, [load]);
+
+  /** Every chunk (any kind, across every upload) the user has starred as a clip/nugget — not just first chunks. */
+  const loadClips = useCallback(async () => {
+    if (!userId) return;
+    const { data, error } = await supabase.from('tj_study_items')
+      .select(COLUMNS).eq('saved', true).order('created_at', { ascending: false }).limit(200);
+    if (error) { setError(error.message); return; }
+    setClips(data as StudyItem[]);
+  }, [userId]);
+
+  /** Star or unstar one chunk as a clip, by its row id — works on a search-result chunk or a library row alike. */
+  const toggleSave = async (id: string, saved: boolean) => {
+    const { error } = await supabase.from('tj_study_items').update({ saved }).eq('id', id);
+    if (error) throw new Error(error.message);
+    await loadClips();
+  };
 
   /** Upload the file (if any) to the private tj-study bucket, then have it read, transcribed and embedded. */
   const add = async ({ file, ...rest }: Ingest) => {
@@ -76,7 +94,7 @@ export function useStudy(userId: string | undefined) {
   const ask = (query: string, kind?: StudyKind, dayFrom?: string, dayTo?: string) =>
     call<{ answer: string; sources: StudySource[] }>('tj-study-search', { query, kind, dayFrom: dayFrom || undefined, dayTo: dayTo || undefined });
 
-  return { items, error, reload: load, add, remove, ask };
+  return { items, clips, error, reload: load, add, remove, ask, loadClips, toggleSave };
 }
 export type Study = ReturnType<typeof useStudy>;
 
