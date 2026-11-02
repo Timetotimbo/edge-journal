@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BarChart3, BookOpen, List, LogOut, TrendingUp, Upload } from 'lucide-react';
+import { BarChart3, BookOpen, GraduationCap, List, LogOut, TrendingUp, Upload } from 'lucide-react';
 import ThemePicker from './components/ThemePicker';
 import { supabase } from './lib/supabase';
 import { useJournal } from './lib/store';
@@ -13,6 +13,7 @@ import Trades from './pages/Trades';
 import Progress from './pages/Progress';
 import JournalPage from './pages/JournalPage';
 import Import from './pages/Import';
+import StudyPage from './pages/StudyPage';
 import TradeDetail from './components/TradeDetail';
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'trades', label: 'Trades', icon: List },
   { id: 'journal', label: 'Journal', icon: BookOpen },
+  { id: 'study', label: 'Study', icon: GraduationCap },
   { id: 'import', label: 'Import', icon: Upload },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
@@ -147,7 +149,8 @@ export default function App() {
             )}
           </div>
         )}
-        {j.trades === null ? <p className="text-mute text-sm">Loading…</p>
+        {tab === 'study' ? <StudyPage userId={session.user.id} />
+          : j.trades === null ? <p className="text-mute text-sm">Loading…</p>
           : tab === 'progress' ? <Progress every={every} trades={shown} scope={scope} />
           : tab === 'dashboard' ? <Dashboard trades={shown} anyAdds={anyAdds} scope={scope} onAdds={k => { setFilters({ ...filters, adds: k }); go('trades'); }} everyKind={everyKind} perAccount={perAccount} accountSizes={j.sizes} subs={j.subs} onSize={(a, n) => void j.saveSize(a, n)} everyAccount={everyAccount} all={j.trades} onDay={openDay} onTrade={setOpenId} onImport={() => go('import')} />
           : tab === 'trades' ? <Trades trades={shown} j={j} onOpen={openFrom} />
@@ -155,7 +158,7 @@ export default function App() {
           : <Import j={j} onDone={() => go('trades')} />}
       </main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-bg/95 backdrop-blur grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-bg/95 backdrop-blur grid grid-cols-6 pb-[env(safe-area-inset-bottom)]">
         {TABS.map(t => (
           <button key={t.id} onClick={() => go(t.id)} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${tab === t.id ? 'text-edge' : 'text-mute'}`}>
             <t.icon className="w-5 h-5" />{t.label}

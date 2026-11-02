@@ -69,3 +69,21 @@ export type Trade = {
 export type NewTrade = Omit<Trade, 'id'>;
 
 export type Day = { day: string; plan: string | null; review: string | null; mood: string | null };
+
+/** Study tab: one saved piece of study material (a transcript chunk, a screenshot, a clip, a voice note). Every chunk of one upload shares batch_id. */
+export type StudyKind = 'mentor' | 'own';
+export type StudyMedia = 'text' | 'screenshot' | 'video' | 'audio';
+export type StudyItem = {
+  id: string;
+  batch_id: string;
+  created_at: string;
+  kind: StudyKind;
+  media_type: StudyMedia;
+  label: string;
+  source_url: string | null;
+  day: string | null;
+  media_path: string | null;
+  content: string;
+  chunk_index: number;
+};
+export type StudySource = { id: string; batchId: string; kind: StudyKind; mediaType: StudyMedia; label: string; sourceUrl: string | null; day: string | null; mediaPath: string | null; snippet: string };
