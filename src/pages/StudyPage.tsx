@@ -137,13 +137,13 @@ function Add({ study }: { study: Study }) {
         )}
         {(media === 'text' || media === 'video') && (
           <div>
-            <label className="label">Source link (optional{media === 'text' ? '; a YouTube link with no transcript pasted fetches its captions' : ''})</label>
+            <label className="label">Source link (optional{media === 'text' || media === 'video' ? '; a YouTube link with no transcript pasted fetches its captions' : ''})</label>
             <input className="field" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" />
           </div>
         )}
         {needsFile && (
           <div>
-            <label className="label">{media === 'screenshot' ? 'Image' : media === 'video' ? 'Video clip (stored for playback; only its transcript or label is searched)' : 'Audio file (voice memo, .m4a/.mp3/.wav/.webm)'}</label>
+            <label className="label">{media === 'screenshot' ? 'Image' : media === 'video' ? 'Video clip (stored for playback; clips under 25MB with no transcript get their audio transcribed automatically)' : 'Audio file (voice memo, .m4a/.mp3/.wav/.webm)'}</label>
             <input key={inputKey} type="file" className="field py-1.5 !h-auto"
               accept={media === 'screenshot' ? 'image/png,image/jpeg,image/webp,image/gif' : media === 'video' ? 'video/mp4,video/quicktime,video/webm' : 'audio/*'}
               onChange={e => setFile(e.target.files?.[0] || null)} />
