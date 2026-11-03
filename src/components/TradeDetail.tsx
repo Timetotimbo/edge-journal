@@ -4,6 +4,7 @@ import type { Trade } from '../lib/types';
 import type { Journal } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { money, pnlClass } from '../lib/stats';
+import { tickSize } from '../lib/instruments';
 import { price, when } from './TradeRow';
 import TradeChart from './TradeChart';
 
@@ -121,6 +122,7 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
           <div className="grid grid-cols-3 gap-2 text-sm">
             {[
               ['Entry', price(t.entry_price)], ['Exit', price(t.exit_price)], [t.asset === 'future' ? 'Points' : 'Per share', pts === null ? '–' : `${pts >= 0 ? '+' : ''}${price(pts)}`],
+              ...(t.asset === 'future' && pts !== null ? [['Ticks', `${pts >= 0 ? '+' : ''}${(pts / tickSize(t)).toFixed(1)}`]] : []),
               ['Gross', money(Number(t.gross_pnl), true)], ['Fees', money(Number(t.fees))], ['Hold', hold === null || hold === 0 ? '–' : hold < 60 ? `${Math.round(hold)}m` : `${(hold / 60).toFixed(1)}h`],
               ...(t.mae !== null || t.mfe !== null ? [['MAE', t.mae === null ? '–' : money(-Math.abs(Number(t.mae)))], ['MFE', t.mfe === null ? '–' : money(Math.abs(Number(t.mfe)))], ['Captured', t.mfe && Number(t.gross_pnl) > 0 ? `${Math.round((Number(t.gross_pnl) / Math.abs(Number(t.mfe))) * 100)}%` : '–']] : []),
             ].map(([k, v]) => (

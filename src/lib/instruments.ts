@@ -29,7 +29,7 @@ export const isFuture = (symbol: string) => !!FUTURES[futuresRoot(symbol)];
 export const futuresMult = (root: string) => FUTURES[root]?.mult;
 
 // Smallest price move per instrument (futures); options and stocks move in cents
-const TICKS: Record<string, number> = {
+export const TICKS: Record<string, number> = {
   ES: 0.25, MES: 0.25, NQ: 0.25, MNQ: 0.25, YM: 1, MYM: 1, RTY: 0.1, M2K: 0.1, EMD: 0.1, NKD: 5,
   CL: 0.01, MCL: 0.01, QM: 0.025, NG: 0.001, QG: 0.005, GC: 0.1, MGC: 0.1, SI: 0.005, SIL: 0.005, HG: 0.0005,
   '6E': 0.00005, M6E: 0.0001, '6B': 0.0001, '6J': 0.0000005, '6A': 0.00005, '6C': 0.00005,
@@ -38,3 +38,16 @@ const TICKS: Record<string, number> = {
 /** Dollars per tick for the whole position: 1 NQ = $5, 1 MNQ = $0.50, 1 ES = $12.50 */
 export const tickDollars = (t: { root: string; asset: string; qty: number | string; multiplier: number | string }) =>
   Number(t.qty) * Number(t.multiplier) * (t.asset === 'future' ? TICKS[t.root] ?? 0.01 : 0.01);
+
+/** Smallest price move for one contract (futures) or 1¢ for stocks/options */
+export const tickSize = (t: { root: string; asset: string }) => (t.asset === 'future' ? TICKS[t.root] ?? 0.01 : 0.01);
+
+/**
+ * Net result in ticks, normalized to a 1-lot: net P&L ÷ what a tick was worth on that position.
+ * Lets differently-sized trades on the same underlying compare directly — 1 NQ and 10 MNQ are the
+ * same $5/tick, so a $50 trade on either reads as 10 ticks.
+ */
+export const ticksCaptured = (t: { net_pnl: number | string; root: string; asset: string; qty: number | string; multiplier: number | string }) => {
+  const d = tickDollars(t);
+  return d ? Number(t.net_pnl) / d : 0;
+};

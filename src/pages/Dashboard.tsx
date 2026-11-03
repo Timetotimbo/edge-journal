@@ -163,6 +163,8 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
         <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
         <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
         <Stat all={x(v => `${tick$(v.avgTickWin)} W · ${tick$(v.avgTickLoss)} L`)} label="Avg size ($ per tick)" value={`${tick$(s.avgTick)}/tick`} sub={`Winners ${tick$(s.avgTickWin)} · losers ${tick$(s.avgTickLoss)}`} />
+        <Stat all={x(v => `${Math.round(v.netTicks).toLocaleString()} ticks`)} label="Net edge (ticks)" value={`${Math.round(s.netTicks).toLocaleString()} ticks`} cls={pnlClass(s.netTicks)}
+          sub={`Avg ${s.avgTicks.toFixed(1)}/trade · W ${s.avgTicksWin.toFixed(1)} · L ${s.avgTicksLoss.toFixed(1)}`} />
         <Stat all={x(v => v.sizeByRoot.slice(0, 2).map(r => `${r.root} ${size(r.avg)}`).join(' · ') || '–')} label="Avg contracts" value={s.sizeByRoot.slice(0, 2).map(r => `${r.root} ${size(r.avg)}`).join(' · ') || '–'}
           sub={s.sizeByRoot.slice(0, 2).map(r => `${r.root} W ${size(r.win)} / L ${size(r.loss)}`).join(' · ')} />
         <Stat all={x(v => `${v.winStreak} W · ${v.lossStreak} L`)} label="Streaks" value={`${s.winStreak} W · ${s.lossStreak} L`} sub="Longest in a row" />

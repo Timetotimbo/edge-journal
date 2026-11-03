@@ -1,5 +1,5 @@
 import type { Trade } from './types';
-import { tickDollars } from './instruments';
+import { tickDollars, ticksCaptured } from './instruments';
 
 // Futures trading days: a session runs from 5 pm Central the evening before to the 4 pm close, so a trade on Sunday
 // night belongs to Monday and weekends are never a day. (Shift 7 hours, then take the Chicago date.)
@@ -11,6 +11,8 @@ export type Summary = {
   winRate: number; avgWin: number; avgLoss: number; profitFactor: number; expectancy: number;
   best: number; worst: number; maxDrawdown: number; avgHoldMin: number | null; winDays: number; lossDays: number;
   avgHoldWin: number | null; avgHoldLoss: number | null; avgTick: number; avgTickWin: number; avgTickLoss: number; sizeByRoot: RootSize[];
+  /** Net result per trade, in ticks, normalized to a 1-lot (see ticksCaptured) */
+  avgTicks: number; avgTicksWin: number; avgTicksLoss: number; netTicks: number;
   winStreak: number; lossStreak: number; avgDay: number; tradesPerDay: number;
   /** Highest and lowest running P&L reached, trade by trade */
   high: number; low: number;
@@ -51,6 +53,8 @@ export function summarize(trades: Trade[]): Summary {
     maxDrawdown: dd,
     avgHoldMin: hold(trades), avgHoldWin: hold(wins), avgHoldLoss: hold(losses),
     avgTick: avg(trades.map(tickDollars)), avgTickWin: avg(wins.map(tickDollars)), avgTickLoss: avg(losses.map(tickDollars)), sizeByRoot: sizeByRoot(trades),
+    avgTicks: avg(trades.map(ticksCaptured)), avgTicksWin: avg(wins.map(ticksCaptured)), avgTicksLoss: avg(losses.map(ticksCaptured)),
+    netTicks: trades.reduce((s, t) => s + ticksCaptured(t), 0),
     winStreak, lossStreak, high: peak, low,
     winDays: days.filter(d => d.net > 0).length,
     lossDays: days.filter(d => d.net < 0).length,
