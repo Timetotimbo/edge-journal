@@ -2,6 +2,11 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.13.0 — 2026-11-03
+- Net edge (ticks): net P&L normalized to a 1-lot (net $ ÷ $-per-tick of that position), so differently-sized trades and instruments (MNQ vs NQ) compare directly instead of in dollars, which get distorted by how many contracts you ran. On the dashboard, and a per-trade Ticks tile next to Points in the trade view.
+- Avg R-multiple on the Progress page's desk report: net P&L ÷ MAE, the standard size-independent edge measure. Scoped honestly to trades with MAE logged (NinjaTrader imports only for now), with a count of how many that is.
+- "Up before adding": for trades where you added to a winner and it stayed a winner, shows how much you were up right before the add vs. where the trade finished, so you can see what adding into strength actually bought you. On the dashboard's Adding to positions report and on the individual trade view.
+
 ## 1.12.1 — 2026-10-23
 - The real Gospel Trading Academy logo (background removed) in the header, on the sign-in page, and as the browser and home-screen icon.
 
