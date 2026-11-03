@@ -4,8 +4,8 @@ import type { Trade } from './types';
  * Adding to a position: each time a trade added in its own direction, was it red or green at that moment (the add's
  * price against the average entry so far)? Fills of one order (same direction within a second) count as one.
  * Sets on each trade: adds (how many), addRed / addGreen (adds while losing / winning), heat (the most it was down,
- * in dollars, when it added while losing), addPnlRed / addPnlGreen (what just the added contracts made or lost, to the
- * trade's exit price).
+ * in dollars, when it added while losing), greenBefore (the most it was up, in dollars, when it added while winning),
+ * addPnlRed / addPnlGreen (what just the added contracts made or lost, to the trade's exit price).
  */
 export type AddKind = 'red' | 'green-lost' | 'green' | 'none';
 export const ADD_KINDS: [AddKind, string][] = [
@@ -23,7 +23,7 @@ export function markAdds(trades: Trade[]) {
         last.qty += f.qty;
       } else orders.push({ at, qty: f.qty, price: f.price });
     }
-    let pos = 0, avg = 0, adds = 0, red = 0, green = 0, heat = 0, pnlRed = 0, pnlGreen = 0;
+    let pos = 0, avg = 0, adds = 0, red = 0, green = 0, heat = 0, greenBefore = 0, pnlRed = 0, pnlGreen = 0;
     const exit = t.exit_price === null ? null : Number(t.exit_price);
     for (const o of orders) {
       if (Math.sign(o.qty) === dir) {
@@ -31,13 +31,14 @@ export function markAdds(trades: Trade[]) {
           adds++;
           const move = (o.price - avg) * dir; // + when the position was in profit
           const made = exit === null ? 0 : (exit - o.price) * dir * Math.abs(o.qty) * Number(t.multiplier);
-          if (move < 0) { red++; pnlRed += made; heat = Math.max(heat, -move * Math.abs(pos) * Number(t.multiplier)); } else if (move > 0) { green++; pnlGreen += made; }
+          if (move < 0) { red++; pnlRed += made; heat = Math.max(heat, -move * Math.abs(pos) * Number(t.multiplier)); }
+          else if (move > 0) { green++; pnlGreen += made; greenBefore = Math.max(greenBefore, move * Math.abs(pos) * Number(t.multiplier)); }
         }
         avg = (avg * Math.abs(pos) + o.price * Math.abs(o.qty)) / (Math.abs(pos) + Math.abs(o.qty));
         pos += o.qty;
       } else pos += o.qty;
     }
-    t.adds = adds; t.addRed = red; t.addGreen = green; t.heat = heat; t.addPnlRed = pnlRed; t.addPnlGreen = pnlGreen;
+    t.adds = adds; t.addRed = red; t.addGreen = green; t.heat = heat; t.greenBefore = greenBefore; t.addPnlRed = pnlRed; t.addPnlGreen = pnlGreen;
   }
 }
 

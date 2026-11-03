@@ -13,8 +13,11 @@ export default function AddsReport({ trades, scope, onPick }: { trades: Trade[];
     const groups = byKey(trades, t => addKind(t));
     const red = trades.filter(t => t.addRed);
     const greenLost = trades.filter(t => addKind(t) === 'green-lost');
+    const greenWon = trades.filter(t => addKind(t) === 'green');
     const costRed = red.reduce((s, t) => s + (t.addPnlRed || 0), 0);
     const costGreen = trades.reduce((s, t) => s + (t.addPnlGreen || 0), 0);
+    const avgGreenBefore = greenWon.length ? greenWon.reduce((s, t) => s + (t.greenBefore || 0), 0) / greenWon.length : 0;
+    const avgGreenFinal = greenWon.length ? greenWon.reduce((s, t) => s + Number(t.net_pnl), 0) / greenWon.length : 0;
     const losers = [...trades].filter(t => t.net_pnl < 0).sort((a, b) => a.net_pnl - b.net_pnl);
     const top = losers.slice(0, 20);
     const topRed = top.filter(t => t.addRed).length, topGreen = top.filter(t => addKind(t) === 'green-lost').length;
@@ -23,7 +26,7 @@ export default function AddsReport({ trades, scope, onPick }: { trades: Trade[];
       const rd = ts.filter(t => t.addRed);
       return { month: m.key, count: ts.length, red: rd.length, cost: rd.reduce((s, t) => s + (t.addPnlRed || 0), 0), net: m.net };
     });
-    return { groups, red, greenLost, costRed, costGreen, top, topRed, topGreen, months };
+    return { groups, red, greenLost, greenWon, costRed, costGreen, avgGreenBefore, avgGreenFinal, top, topRed, topGreen, months };
   }, [trades]);
   if (!trades.length) return null;
   const name = (m: string) => new Date(`${m}-15T12:00`).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -37,6 +40,7 @@ export default function AddsReport({ trades, scope, onPick }: { trades: Trade[];
         <li>You added to a losing position on <b>{r.red.length}</b> trades ({pct(r.red.length / trades.length)}). Just the added contracts {r.costRed < 0 ? 'lost' : 'made'} <b className={pnlClass(r.costRed)}>{usd(r.costRed)}</b>.</li>
         {r.top.length > 0 && <li>Of your {r.top.length} biggest losses, <b>{r.topRed}</b> came after averaging down{r.topGreen ? <> and <b>{r.topGreen}</b> after adding to a winner that then turned</> : null}.</li>}
         {r.greenLost.length > 0 && <li><b>{r.greenLost.length}</b> trades were winning when you added, then ended as losses ({usd(r.greenLost.reduce((s, t) => s + Number(t.net_pnl), 0))}).</li>}
+        {r.greenWon.length > 0 && <li>On the <b>{r.greenWon.length}</b> trades you added to a winner and it stayed a win, you were up an average of <b className="text-win">{usd(r.avgGreenBefore)}</b> right before adding, and finished up <b className="text-win">{usd(r.avgGreenFinal)}</b> — adding there gained you about <b className={pnlClass(r.avgGreenFinal - r.avgGreenBefore)}>{usd(r.avgGreenFinal - r.avgGreenBefore)}</b> on average.</li>}
         <li>Adds made while winning {r.costGreen < 0 ? 'lost' : 'made'} <span className={pnlClass(r.costGreen)}>{usd(r.costGreen)}</span> on the added contracts.</li>
       </ul>
       <div className="overflow-x-auto -mx-1 mt-3">

@@ -64,6 +64,8 @@ export type Trade = {
   heat?: number;
   addPnlRed?: number;
   addPnlGreen?: number;
+  /** Worked out when loaded (lib/adds.ts): the most unrealized profit, in dollars, showing on the trade right before an add while winning */
+  greenBefore?: number;
 };
 
 export type NewTrade = Omit<Trade, 'id'>;

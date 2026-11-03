@@ -100,6 +100,8 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
           <Tile label="Tail losses" value={pct(r.tailLossShare)} cls={r.tailLossShare > 0.35 ? 'text-loss' : 'text-win'} note="Share of all losses from your worst 10% of losing trades. Pros keep this low with hard stops." />
           <Tile label="Expectancy" value={money(r.expectancy, true)} cls={pnlClass(r.expectancy)} note="What an average trade is worth after fees." />
           <Tile label="Kelly" value={pct(Math.max(0, r.kelly))} cls={r.kelly > 0 ? 'text-win' : 'text-loss'} note={r.kelly > 0 ? 'Edge-based risk per trade; pros risk a quarter of it or less.' : 'No edge yet: Kelly says risk nothing more until it’s positive.'} />
+          <Tile label="Avg R-multiple" value={r.rCount ? `${r.avgR >= 0 ? '+' : ''}${r.avgR.toFixed(2)}R` : '–'} cls={r.rCount ? pnlClass(r.avgR) : ''}
+            note={r.rCount ? `Net P&L ÷ how far it went against you first (MAE). ${r.rCount} of ${r.trades} trades have MAE logged.` : 'No MAE logged yet — only NinjaTrader imports include it.'} />
           <Tile label="Green days" value={pct(r.greenDays)} note={`${r.days} days traded · avg day ${money(r.avgDay, true)}.`} />
           <Tile label="Hold time" value={`${mins(r.holdWin)} / ${mins(r.holdLoss)}`} cls={r.holdLoss > r.holdWin * 1.5 ? 'text-loss' : ''} note="Median hold on winners / losers. Losers should be the shorter one." />
         </div>

@@ -24,6 +24,9 @@ export type Review = {
   days: number; greenDays: number; avgDay: number; bestDay: number; worstDay: number; sharpe: number; sortino: number;
   maxDrawdown: number; recovery: number; consistency: number; worstDaysAvg: number; tailLossShare: number;
   holdWin: number; holdLoss: number; tradesPerDay: number;
+  /** R-multiple: net P&L ÷ MAE (how far the trade went against you before it worked out), the classic size-independent
+   * edge measure. Only trades with MAE logged count (currently NinjaTrader imports only); rCount says how many that is. */
+  avgR: number; rCount: number;
 };
 
 /** Desk and fund statistics for a set of trades. Sharpe and Sortino use daily P&L in dollars, annualised over 252 days. */
@@ -44,6 +47,8 @@ export function review(trades: Trade[]): Review {
   const bestDay = daily.length ? Math.max(...daily) : 0;
   const worst5 = [...daily].sort((a, b) => a - b).slice(0, Math.max(1, Math.ceil(daily.length * 0.05)));
   const lossAmounts = losses.map(t => -Number(t.net_pnl)).sort((a, b) => b - a);
+  const rTrades = trades.filter(t => t.mae !== null && Math.abs(Number(t.mae)) > 0);
+  const rs = rTrades.map(t => Number(t.net_pnl) / Math.abs(Number(t.mae)));
   return {
     trades: trades.length, net, winRate, avgWin, avgLoss, payoff,
     avgWinPts: mean(pts(wins)), avgLossPts: mean(pts(losses)),
@@ -63,6 +68,7 @@ export function review(trades: Trade[]): Review {
     tailLossShare: lost ? sum(lossAmounts.slice(0, Math.max(1, Math.ceil(lossAmounts.length * 0.1)))) / lost : 0,
     holdWin: median(wins.map(holdMin)), holdLoss: median(losses.map(holdMin)),
     tradesPerDay: daily.length ? trades.length / daily.length : 0,
+    avgR: mean(rs), rCount: rTrades.length,
   };
 }
 
