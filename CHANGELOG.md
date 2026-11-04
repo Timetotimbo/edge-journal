@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.13.1 — 2026-11-03
+- "Added to a winner" on the trade view now shows points and ticks of profit before the add, not just dollars (e.g. "up $140 (+5.6 pts, +22.4 ticks) right before adding").
+
 ## 1.13.0 — 2026-11-03
 - Net edge (ticks): net P&L normalized to a 1-lot (net $ ÷ $-per-tick of that position), so differently-sized trades and instruments (MNQ vs NQ) compare directly instead of in dollars, which get distorted by how many contracts you ran. On the dashboard, and a per-trade Ticks tile next to Points in the trade view.
 - Avg R-multiple on the Progress page's desk report: net P&L ÷ MAE, the standard size-independent edge measure. Scoped honestly to trades with MAE logged (NinjaTrader imports only for now), with a count of how many that is.
