@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.14.0 — 2026-11-11
+- Projected P&L on the dashboard, next to Avg hold: what your net would be if every loser had been closed at your winners' average hold time. Each loser that ran longer is re-priced from the 1-minute chart at that moment (fills up to then stand, whatever was still open is closed at the market price, fees unchanged). Shows the difference from what really happened, how many losers were re-priced and how many of those came out better. Losers already closed sooner, and ones with no chart data for that minute, keep their real result. Follows the account, date and other filters like every other card.
+
 ## 1.13.1 — 2026-11-03
 - "Added to a winner" on the trade view now shows points and ticks of profit before the add, not just dollars (e.g. "up $140 (+5.6 pts, +22.4 ticks) right before adding").
 

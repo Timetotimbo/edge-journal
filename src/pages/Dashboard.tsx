@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Trade } from '../lib/types';
 import { tickDollars } from '../lib/instruments';
 import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type Group } from '../lib/stats';
+import { cutLosers, type CutResult } from '../lib/whatif';
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
 import Subscriptions from '../components/Subscriptions';
@@ -118,6 +119,14 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
   // With one account picked, each card also shows the same number across all accounts
   const x = (f: (v: typeof s) => string) => (a ? f(a) : undefined);
   const curve = useMemo(() => equityCurve(trades), [trades]);
+  // What if losers had been closed at the average winner's hold? Priced from the 1-minute bars, so it arrives a moment later
+  const [whatIf, setWhatIf] = useState<CutResult | null>(null);
+  useEffect(() => {
+    let gone = false;
+    setWhatIf(null);
+    if (s.avgHoldWin && s.losses) void cutLosers(trades, s.avgHoldWin).then(r => { if (!gone) setWhatIf(r); });
+    return () => { gone = true; };
+  }, [trades, s.avgHoldWin, s.losses]);
   const weekday = useMemo(() => {
     const g = Object.fromEntries(byKey(trades, t => String(new Date(t.entry_at).getDay())).map(x => [x.key, x.net]));
     return [1, 2, 3, 4, 5].map(d => ({ name: DAYS[d], net: g[d] || 0 }));
@@ -162,6 +171,12 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
         <Stat all={x(v => `${money(v.high, true)} / ${money(v.low, true)}`)} label="Highest / lowest P&L" value={money(s.high, true)} cls="text-win" sub={`Lowest ${money(s.low, true)} · running total`} />
         <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
         <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
+        {!!s.avgHoldWin && !!s.losses && (
+          <Stat label={`Projected P&L · losers cut at ${mins(s.avgHoldWin)}`} value={whatIf ? money(whatIf.net, true) : '…'} cls={whatIf ? pnlClass(whatIf.net) : 'text-mute'}
+            sub={!whatIf ? 'Pricing your losers from the charts…'
+              : !whatIf.cut ? `No losers could be re-priced${whatIf.missing ? ` (${whatIf.missing} ran longer but have no chart data)` : ' (none ran longer than your winners)'}`
+              : `${usd(whatIf.delta)} vs actual · ${whatIf.cut} losers closed at your winners' average hold, ${whatIf.better} came out better${whatIf.missing ? ` · ${whatIf.missing} more have no chart data` : ''}`} />
+        )}
         <Stat all={x(v => `${tick$(v.avgTickWin)} W · ${tick$(v.avgTickLoss)} L`)} label="Avg size ($ per tick)" value={`${tick$(s.avgTick)}/tick`} sub={`Winners ${tick$(s.avgTickWin)} · losers ${tick$(s.avgTickLoss)}`} />
         <Stat all={x(v => `${Math.round(v.netTicks).toLocaleString()} ticks`)} label="Net edge (ticks)" value={`${Math.round(s.netTicks).toLocaleString()} ticks`} cls={pnlClass(s.netTicks)}
           sub={`Avg ${s.avgTicks.toFixed(1)}/trade · W ${s.avgTicksWin.toFixed(1)} · L ${s.avgTicksLoss.toFixed(1)}`} />

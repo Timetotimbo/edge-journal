@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { IChartApi, SeriesMarker, UTCTimestamp } from 'lightweight-charts';
 import type { Trade } from '../lib/types';
 import { price } from './TradeRow';
+import { dayBars, etDate, loadBars, type Bar, type DayFile } from '../lib/bars';
 
 // The chart at the time of a trade: 1-minute bars from NinjaTrader's price history (public/bars/<ROOT>/<Eastern date>.json,
 // made by tools/export_bars.py) with the trade's buys and sells marked. The zoomed-out frames (1h, 4h, daily) use hourly bars
 // for the trade's month and the months either side (public/bars/<ROOT>/h/<yyyy-mm>.json, from tools/export_hourly.py).
-type Bar = [number, number, number, number, number, number];
-type DayFile = { contract: string; tick: number; bars: Bar[] };
-
 // Minutes per bar; a day is one futures session (6pm Eastern to 5pm)
 const DAY = 1440;
 const FRAMES: [number, string][] = [[1, '1m'], [5, '5m'], [15, '15m'], [60, '1h'], [240, '4h'], [DAY, 'D']];
@@ -20,16 +18,7 @@ const bucket = (ts: number, sec: number) =>
   : sec === 14400 ? Math.floor((ts - 79200) / sec) * sec + 79200
   : Math.floor(ts / sec) * sec;
 const month = (iso: string, by: number) => { const d = new Date(iso); d.setUTCDate(15); d.setUTCMonth(d.getUTCMonth() + by); return d.toISOString().slice(0, 7); };
-const etDate = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-const cache = new Map<string, Promise<DayFile | null>>();
-function day(root: string, date: string) {
-  const k = `${root}/${date}`;
-  return load(k);
-}
-function load(k: string) {
-  if (!cache.has(k)) cache.set(k, fetch(`/bars/${k}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null));
-  return cache.get(k)!;
-}
+const day = dayBars, load = loadBars;
 // Charts draw times as UTC; shift them so the axis reads in this phone's own time
 const local = (s: number) => (s - new Date(s * 1000).getTimezoneOffset() * 60) as UTCTimestamp;
 const css = (v: string, a = 1) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim().replace(/ /g, ',')}${a < 1 ? `,${a}` : ''})`.replace('rgb(', a < 1 ? 'rgba(' : 'rgb(');
