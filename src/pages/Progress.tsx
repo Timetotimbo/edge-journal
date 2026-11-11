@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Target } from 'lucide-react';
 import type { Trade } from '../lib/types';
-import { money, pct, pnlClass } from '../lib/stats';
+import { money, pct, pnlClass, summarize } from '../lib/stats';
+import { cutLosers, type CutResult } from '../lib/whatif';
 import { byYear, coach, review, verdict, type DayTypes, type Review } from '../lib/review';
 
 const ratio = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '∞');
@@ -46,6 +47,17 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
   useEffect(() => { fetch('/bars/days.json').then(r => (r.ok ? r.json() : null)).then(setTypes).catch(() => setTypes(null)); }, []);
   const years = useMemo(() => byYear(every).map(([y, ts]) => [y, review(ts)] as [string, Review]), [every]);
   const r = useMemo(() => review(trades), [trades]);
+  // Each year's net had its losers been closed at that year's average winner hold (priced from the 1-minute bars)
+  const [cuts, setCuts] = useState<Record<string, CutResult | null> | null>(null);
+  useEffect(() => {
+    let gone = false;
+    setCuts(null);
+    void Promise.all(byYear(every).map(async ([y, ts]) => { const w = summarize(ts).avgHoldWin; return [y, w ? await cutLosers(ts, w) : null] as const; }))
+      .then(rs => { if (!gone) setCuts(Object.fromEntries(rs)); });
+    return () => { gone = true; };
+  }, [every]);
+  const cutAll = cuts && Object.values(cuts).reduce((a, c) => (c ? { net: a.net + c.net, delta: a.delta + c.delta, cut: a.cut + c.cut, missing: a.missing + c.missing } : a), { net: 0, delta: 0, cut: 0, missing: 0 });
+  const cutNet = cuts && years.reduce((a, [y, yr]) => a + (cuts[y]?.net ?? yr.net), 0);
   const findings = useMemo(() => coach(trades, types), [trades, types]);
   if (!every.length) return <p className="text-mute text-sm">No trades yet.</p>;
 
@@ -81,9 +93,25 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
                   })}
                 </tr>
               ))}
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">Projected net · losers cut</td>
+                {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className={`p-2 text-right whitespace-nowrap font-semibold ${c ? pnlClass(c.net) : 'text-mute'}`}>{c ? money(c.net, true) : cuts ? '–' : '…'}</td>; })}
+              </tr>
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;vs actual</td>
+                {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className={`p-2 text-right whitespace-nowrap ${c ? pnlClass(c.delta) : 'text-mute'}`}>{c ? money(c.delta, true) : cuts ? '–' : '…'}</td>; })}
+              </tr>
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;cut at · losers re-priced</td>
+                {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className="p-2 text-right whitespace-nowrap text-mute">{c ? `${mins(c.cutMin)} · ${c.cut}${c.missing ? ` of ${c.cut + c.missing}` : ''}` : cuts ? '–' : '…'}</td>; })}
+              </tr>
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-mute">
+          Projected net: what each year would have made if every loser that ran longer than that year’s average winner had been closed at that point, priced from the 1-minute chart. Losers with no chart data keep their real result.
+          {cutAll && cutNet !== null && <> All years together: <span className={`num font-semibold ${pnlClass(cutNet)}`}>{money(cutNet, true)}</span> (<span className={`num ${pnlClass(cutAll.delta)}`}>{money(cutAll.delta, true)}</span> vs actual), {cutAll.cut} losers re-priced{cutAll.missing ? `, ${cutAll.missing} without chart data` : ''}.</>}
+        </p>
       </section>
 
       <section className="space-y-2">

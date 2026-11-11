@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.15.0 — 2026-11-11
+- Progress → Year by year: the projected P&L for every year. Three new rows show each year's net if losers had been closed at that year's average winner hold, the difference from what really happened, and the cut-off time with how many losers were re-priced. A line under the table adds all years together.
+
 ## 1.14.0 — 2026-11-11
 - Projected P&L on the dashboard, next to Avg hold: what your net would be if every loser had been closed at your winners' average hold time. Each loser that ran longer is re-priced from the 1-minute chart at that moment (fills up to then stand, whatever was still open is closed at the market price, fees unchanged). Shows the difference from what really happened, how many losers were re-priced and how many of those came out better. Losers already closed sooner, and ones with no chart data for that minute, keep their real result. Follows the account, date and other filters like every other card.
 
