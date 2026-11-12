@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ImagePlus, Star, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImagePlus, Pencil, Star, Trash2, X } from 'lucide-react';
 import type { Trade } from '../lib/types';
 import type { Journal } from '../lib/store';
 import { supabase } from '../lib/supabase';
@@ -7,6 +7,7 @@ import { money, pnlClass } from '../lib/stats';
 import { tickSize } from '../lib/instruments';
 import { price, when } from './TradeRow';
 import TradeChart from './TradeChart';
+import Markup from './Markup';
 
 // From the Trader's Mind Map: what was driving the trade
 export const EMOTIONS = ['Calm', 'Confident', 'Focused', 'Patient', 'FOMO', 'Fear', 'Greed', 'Revenge', 'Impatient', 'Frustrated', 'Bored', 'Overconfident'];
@@ -38,6 +39,8 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
   const [err, setErr] = useState('');
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+  // The picture being drawn on: a saved screenshot's link, or a snapshot of the chart above
+  const [marking, setMarking] = useState<Blob | string | null>(null);
   useEffect(() => { setNotes(t.notes || ''); setSetup(t.setup || ''); }, [t.id]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -61,7 +64,7 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
   const setups = useMemo(() => [...new Set((j.trades || []).map(x => x.setup).filter(Boolean) as string[])], [j.trades]);
   const used = (k: 'tags' | 'mistakes') => [...new Set((j.trades || []).flatMap(x => x[k]))];
 
-  const upload = async (files: FileList | File[]) => {
+  const upload = async (files: FileList | Blob[]) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -136,7 +139,7 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
             ))}
           </div>
 
-          <TradeChart t={t} />
+          <TradeChart t={t} onMarkup={setMarking} />
 
           <div>
             <label className="label" htmlFor="setup">Setup</label>
@@ -173,11 +176,12 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
           </div>
 
           <div>
-            <div className="label">Chart screenshots <span className="font-normal">(or paste one here)</span></div>
+            <div className="label">Chart screenshots <span className="font-normal">(or paste one here) · Mark up saves a copy with your drawing</span></div>
             <div className="grid grid-cols-2 gap-2">
               {t.shots.map(p => (
                 <div key={p} className="relative group">
                   {urls[p] ? <a href={urls[p]} target="_blank" rel="noreferrer"><img src={urls[p]} alt="Chart" className="rounded-lg border border-line w-full aspect-video object-cover" /></a> : <div className="rounded-lg border border-line aspect-video" />}
+                  {urls[p] && <button onClick={() => setMarking(urls[p])} className="absolute top-1 left-1 rounded-md bg-black/70 px-1.5 py-1 text-white text-[11px] flex items-center gap-1" aria-label="Mark up screenshot"><Pencil className="w-3.5 h-3.5" />Mark up</button>}
                   <button onClick={() => void removeShot(p)} className="absolute top-1 right-1 rounded-md bg-black/70 p-1 text-white" aria-label="Remove screenshot"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
@@ -208,6 +212,7 @@ export default function TradeDetail({ trade: t, j, onClose, nav }: { trade: Trad
           <button className="btn text-loss hover:bg-loss/10" onClick={() => { if (confirm('Delete this trade?')) void j.deleteTrades([t.id]).then(onClose); }}><Trash2 className="w-4 h-4" />Delete trade</button>
         </div>
       </div>
+      {marking && <Markup src={marking} onClose={() => setMarking(null)} onSave={b => upload([b])} />}
     </div>
   );
 }

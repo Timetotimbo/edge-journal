@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IChartApi, SeriesMarker, UTCTimestamp } from 'lightweight-charts';
 import type { Trade } from '../lib/types';
+import { Pencil } from 'lucide-react';
 import { price } from './TradeRow';
 import { dayBars, etDate, loadBars, type Bar, type DayFile } from '../lib/bars';
 
@@ -39,8 +40,9 @@ function orders(t: Trade) {
 }
 const hms = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
-export default function TradeChart({ t }: { t: Trade }) {
+export default function TradeChart({ t, onMarkup }: { t: Trade; onMarkup?: (picture: Blob) => void }) {
   const box = useRef<HTMLDivElement>(null);
+  const shown = useRef<IChartApi | null>(null);
   const [frame, setFrame] = useState(1);
   const [state, setState] = useState<'loading' | 'none' | 'ok'>('loading');
   const [contract, setContract] = useState('');
@@ -82,7 +84,7 @@ export default function TradeChart({ t }: { t: Trade }) {
       if (gone || !box.current) return;
       setState('ok');
       const win = css('--win'), loss = css('--loss'), edge = css('--edge');
-      chart = createChart(box.current, {
+      shown.current = chart = createChart(box.current, {
         autoSize: true,
         layout: { background: { color: 'transparent' }, textColor: css('--mute'), fontSize: 11 },
         grid: { vertLines: { color: css('--line', 0.5) }, horzLines: { color: css('--line', 0.5) } },
@@ -112,8 +114,20 @@ export default function TradeChart({ t }: { t: Trade }) {
       const pad = Math.max((daily ? 20 : wide ? 24 : 30) * sec, (to - from) * 0.6);
       chart.timeScale().setVisibleRange({ from: at(bucket(from - pad, sec)), to: at(bucket(to + pad, sec)) });
     })();
-    return () => { gone = true; chart?.remove(); };
+    return () => { gone = true; shown.current = null; chart?.remove(); };
   }, [t.id, t.root, t.entry_at, t.exit_at, frame]);
+
+  // The chart exactly as it's showing now (zoom, frame, order marks), on the page's background, to draw on
+  const snap = () => {
+    const pic = shown.current?.takeScreenshot();
+    if (!pic || !onMarkup) return;
+    const c = document.createElement('canvas');
+    c.width = pic.width; c.height = pic.height;
+    const g = c.getContext('2d')!;
+    g.fillStyle = css('--bg'); g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(pic, 0, 0);
+    c.toBlob(b => b && onMarkup(b), 'image/png');
+  };
 
   if (state === 'none') return null;
   return (
@@ -122,6 +136,7 @@ export default function TradeChart({ t }: { t: Trade }) {
         <div className="label !mb-0">Chart</div>
         {contract && <span className="text-[11px] text-mute">{contract} · your time</span>}
         <div className="ml-auto flex gap-1">
+          {onMarkup && state === 'ok' && <button onClick={snap} className="chip !px-2 border-line text-mute flex items-center gap-1"><Pencil className="w-3 h-3" />Mark up</button>}
           {FRAMES.map(([f, l]) => (
             <button key={f} onClick={() => setFrame(f)} className={`chip !px-2 ${frame === f ? 'border-edge bg-edge/15 text-edge' : 'border-line text-mute'}`}>{l}</button>
           ))}

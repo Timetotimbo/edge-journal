@@ -4,6 +4,7 @@ import type { Day } from '../lib/types';
 import { dayOf, money, pct, pnlClass, summarize } from '../lib/stats';
 import TradeRow from '../components/TradeRow';
 import { EMOTIONS } from '../components/TradeDetail';
+import DayCharts from '../components/DayCharts';
 
 function DayCard({ day, note, j, onTrade, focused }: { day: string; note?: Day; j: Journal; onTrade: (id: string) => void; focused: boolean }) {
   const trades = useMemo(() => (j.trades || []).filter(t => dayOf(t.entry_at) === day).sort((a, b) => a.entry_at.localeCompare(b.entry_at)), [j.trades, day]);
@@ -37,6 +38,7 @@ function DayCard({ day, note, j, onTrade, focused }: { day: string; note?: Day; 
           {EMOTIONS.map(m => <button key={m} onClick={() => void save({ mood: note?.mood === m ? null : m })} className={`chip ${note?.mood === m ? 'border-edge bg-edge/15 text-edge' : 'border-line text-mute'}`}>{m}</button>)}
         </div>
       </div>
+      <DayCharts day={day} />
       {trades.length > 0 && <div className="divide-y divide-line border-t border-line">{trades.map(t => <TradeRow key={t.id} t={t} onOpen={onTrade} />)}</div>}
     </section>
   );

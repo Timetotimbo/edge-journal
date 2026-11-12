@@ -2,6 +2,11 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.16.0 — 2026-11-12
+- Mark up charts: a drawing tool for chart pictures — freehand, straight lines, arrows, boxes and text, seven colours, three thicknesses, undo and erase-all. Save keeps a full-size copy with your drawing; the original stays as it was.
+- On a trade: every screenshot has a Mark up button, and the trade's own chart has one too (it draws on the chart exactly as you have it zoomed, with your entries and exits on it).
+- On each Journal day: a Charts section. "Mark up a chart" takes a screenshot from your phone straight into the drawing tool; "Add as is" just saves it. Kept privately with that day.
+
 ## 1.15.0 — 2026-11-11
 - Progress → Year by year: the projected P&L for every year. Three new rows show each year's net if losers had been closed at that year's average winner hold, the difference from what really happened, and the cut-off time with how many losers were re-priced. A line under the table adds all years together.
 
