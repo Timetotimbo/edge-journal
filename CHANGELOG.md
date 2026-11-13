@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.18.0 — 2026-11-13
+- Mark up chart: pinch with two fingers to zoom in and drag to pan, for drawing precisely on small details. A reset-zoom button and a "% zoomed" readout appear while zoomed in.
+- Lines, arrows and boxes (not freehand strokes) can now be grabbed and dragged to reposition, the same way text and the price line already could.
+
 ## 1.17.0 — 2026-11-13
 - Mark up chart: a new Price line tool draws a full-width horizontal line at any level, drag it into place and drag it again later to move it.
 - Text you've placed can now be grabbed and dragged to reposition it, instead of having to erase it and type it again.
