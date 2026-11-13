@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.17.0 — 2026-11-13
+- Mark up chart: a new Price line tool draws a full-width horizontal line at any level, drag it into place and drag it again later to move it.
+- Text you've placed can now be grabbed and dragged to reposition it, instead of having to erase it and type it again.
+
 ## 1.16.0 — 2026-11-12
 - Mark up charts: a drawing tool for chart pictures — freehand, straight lines, arrows, boxes and text, seven colours, three thicknesses, undo and erase-all. Save keeps a full-size copy with your drawing; the original stays as it was.
 - On a trade: every screenshot has a Mark up button, and the trade's own chart has one too (it draws on the chart exactly as you have it zoomed, with your entries and exits on it).

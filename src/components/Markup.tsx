@@ -1,16 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Minus, Pencil, Square, Trash2, Type, Undo2, X } from 'lucide-react';
+import { ArrowUpRight, Minus, Pencil, SeparatorHorizontal, Square, Trash2, Type, Undo2, X } from 'lucide-react';
 
-// Draw on a chart picture: freehand, straight lines, arrows, boxes and text, in a few colours. Everything is kept as a
-// list of shapes in the picture's own pixels (so undo works and the saved copy is full size), and Save hands back a JPEG.
-type Tool = 'pen' | 'line' | 'arrow' | 'box' | 'text';
+// Draw on a chart picture: freehand, straight lines, arrows, boxes, a full-width price line, and text, in a few
+// colours. Everything is kept as a list of shapes in the picture's own pixels (so undo works and the saved copy is
+// full size), and Save hands back a JPEG.
+type Tool = 'pen' | 'line' | 'hline' | 'arrow' | 'box' | 'text';
 type Shape = { tool: Tool; color: string; w: number; pts: [number, number][]; text?: string };
 
-const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['arrow', 'Arrow', ArrowUpRight], ['box', 'Box', Square], ['text', 'Text', Type]];
+const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['box', 'Box', Square], ['text', 'Text', Type]];
 const COLORS = ['#ff8a1f', '#22c55e', '#ef4444', '#facc15', '#38bdf8', '#ffffff', '#000000'];
 const SIZES: [number, string][] = [[2, 'Thin'], [4, 'Medium'], [7, 'Thick']];
 const MAX = 2400; // longest side of the saved picture
+
+// Was the point a tap on an already-placed text shape? Lets text be grabbed and dragged instead of only ever added.
+function textHit(g: CanvasRenderingContext2D, shapes: Shape[], p: [number, number]): number {
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if (s.tool !== 'text') continue;
+    const px = s.w * 6;
+    g.font = `600 ${px}px system-ui, sans-serif`;
+    const w = g.measureText(s.text || '').width, [x, y] = s.pts[0], pad = px * 0.35;
+    if (p[0] >= x - pad && p[0] <= x + w + pad && p[1] >= y - px / 2 - pad && p[1] <= y + px / 2 + pad) return i;
+  }
+  return -1;
+}
+
+// Was the point near an already-placed horizontal price line? Lets it be grabbed and dragged up/down.
+function hlineHit(shapes: Shape[], p: [number, number]): number {
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if (s.tool === 'hline' && Math.abs(p[1] - s.pts[0][1]) <= Math.max(s.w * 3, 14)) return i;
+  }
+  return -1;
+}
 
 function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H: number, shapes: Shape[]) {
   g.drawImage(img, 0, 0, W, H);
@@ -25,6 +48,7 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
       g.lineWidth = px / 6; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
       g.strokeText(s.text || '', a[0], a[1]); g.fillText(s.text || '', a[0], a[1]);
     } else if (s.tool === 'box') g.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    else if (s.tool === 'hline') { g.beginPath(); g.moveTo(0, a[1]); g.lineTo(W, a[1]); g.stroke(); }
     else {
       g.beginPath(); g.moveTo(a[0], a[1]);
       if (s.tool === 'pen') { for (const p of s.pts.slice(1)) g.lineTo(p[0], p[1]); if (s.pts.length === 1) g.lineTo(a[0] + 0.01, a[1]); }
@@ -48,6 +72,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const [dim, setDim] = useState<[number, number] | null>(null);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const live = useRef<Shape | null>(null);
+  const dragShape = useRef<{ index: number; start: [number, number]; orig: [number, number] } | null>(null);
   const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState(4);
@@ -101,22 +126,45 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     if (!dim) return;
     const p = at(e);
     if (tool === 'text') {
+      const hit = textHit(canvas.current!.getContext('2d')!, shapes, p);
+      if (hit !== -1) {
+        canvas.current!.setPointerCapture(e.pointerId);
+        dragShape.current = { index: hit, start: p, orig: shapes[hit].pts[0] };
+        return;
+      }
       const text = prompt('Text to add')?.trim();
       if (text) setShapes(s => [...s, { tool, color, w: width(), pts: [p], text }]);
       return;
+    }
+    if (tool === 'hline') {
+      const hit = hlineHit(shapes, p);
+      if (hit !== -1) {
+        canvas.current!.setPointerCapture(e.pointerId);
+        dragShape.current = { index: hit, start: p, orig: shapes[hit].pts[0] };
+        return;
+      }
     }
     canvas.current!.setPointerCapture(e.pointerId);
     live.current = { tool, color, w: width(), pts: [p] };
     redraw();
   };
   const move = (e: React.PointerEvent) => {
+    const drag = dragShape.current;
+    if (drag) {
+      const p = at(e);
+      const np: [number, number] = [drag.orig[0] + (p[0] - drag.start[0]), drag.orig[1] + (p[1] - drag.start[1])];
+      setShapes(list => list.map((s, i) => (i === drag.index ? { ...s, pts: [np] } : s)));
+      return;
+    }
     const s = live.current;
     if (!s) return;
     const p = at(e);
-    if (s.tool === 'pen') s.pts.push(p); else s.pts[1] = p;
+    // A price line follows the pointer directly while it's being placed, rather than stretching from a fixed start
+    if (s.tool === 'pen') s.pts.push(p); else if (s.tool === 'hline') s.pts[0] = p; else s.pts[1] = p;
     redraw();
   };
   const up = () => {
+    if (dragShape.current) { dragShape.current = null; return; }
     const s = live.current;
     if (!s) return;
     live.current = null;
