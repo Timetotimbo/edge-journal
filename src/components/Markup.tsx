@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Minus, Pencil, Scan, SeparatorHorizontal, Square, Trash2, Type, Undo2, X } from 'lucide-react';
+import { ArrowUpRight, Circle, Minus, Pencil, Scan, SeparatorHorizontal, Square, Trash2, Type, Undo2, X } from 'lucide-react';
 
 // Draw on a chart picture: freehand, straight lines, arrows, boxes, a full-width price line, and text, in a few
 // colours. Everything is kept as a list of shapes in the picture's own pixels (so undo works, pinch-zoom is just a
 // view on top of the same data, and the saved copy is full size), and Save hands back a JPEG.
-type Tool = 'pen' | 'line' | 'hline' | 'arrow' | 'box' | 'text';
+type Tool = 'pen' | 'line' | 'hline' | 'arrow' | 'oval' | 'box' | 'text';
 type Shape = { tool: Tool; color: string; w: number; pts: [number, number][]; text?: string };
 type View = { scale: number; x: number; y: number };
 
-const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['box', 'Box', Square], ['text', 'Text', Type]];
+const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['oval', 'Circle', Circle], ['box', 'Box', Square], ['text', 'Text', Type]];
 const COLORS = ['#ff8a1f', '#22c55e', '#ef4444', '#facc15', '#38bdf8', '#ffffff', '#000000'];
 const SIZES: [number, string][] = [[2, 'Thin'], [4, 'Medium'], [7, 'Thick']];
 const MAX = 2400; // longest side of the saved picture
@@ -41,7 +41,7 @@ function hitIndex(shapes: Shape[], p: [number, number], g: CanvasRenderingContex
       const w = g.measureText(s.text || '').width, pad = px * 0.35;
       if (p[0] >= a[0] - pad && p[0] <= a[0] + w + pad && p[1] >= a[1] - px / 2 - pad && p[1] <= a[1] + px / 2 + pad) return i;
     } else if (s.tool === 'hline') { if (Math.abs(p[1] - a[1]) <= tol) return i; }
-    else if (s.tool === 'box') { if (inBox(p, a, b, tol)) return i; }
+    else if (s.tool === 'box' || s.tool === 'oval') { if (inBox(p, a, b, tol)) return i; }
     else if (distToSeg(p, a, b) <= tol) return i; // line, arrow
   }
   return -1;
@@ -60,6 +60,12 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
       g.lineWidth = px / 6; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
       g.strokeText(s.text || '', a[0], a[1]); g.fillText(s.text || '', a[0], a[1]);
     } else if (s.tool === 'box') g.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    else if (s.tool === 'oval') {
+      // Drag corner to corner: the oval fills that box, so a tall drag circles a wick and a square one a round circle
+      g.beginPath();
+      g.ellipse((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.max(1, Math.abs(b[0] - a[0]) / 2), Math.max(1, Math.abs(b[1] - a[1]) / 2), 0, 0, Math.PI * 2);
+      g.stroke();
+    }
     else if (s.tool === 'hline') { g.beginPath(); g.moveTo(0, a[1]); g.lineTo(W, a[1]); g.stroke(); }
     else {
       g.beginPath(); g.moveTo(a[0], a[1]);
