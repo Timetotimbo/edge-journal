@@ -166,10 +166,10 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     else void root.current?.requestFullscreen?.().catch(() => setErr("This browser won't go full screen.")); 
   };
   // The app's own text box (the browser's prompt() can be silenced by the phone after a few, and looks out of place)
-  const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; resolve: (v: string | null) => void } | null>(null);
+  const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; noInput?: boolean; onDelete?: () => void; resolve: (v: string | null) => void } | null>(null);
   const askOpen = useRef(false);
   askOpen.current = !!ask;
-  const askFor = (title: string, value = '', more: { hint?: string; numeric?: boolean } = {}) =>
+  const askFor = (title: string, value = '', more: { hint?: string; numeric?: boolean; noInput?: boolean; onDelete?: () => void } = {}) =>
     new Promise<string | null>(resolve => setAsk({ title, value, ...more, resolve }));
   const answer = (v: string | null) => { ask?.resolve(v); setAsk(null); };
   const [saving, setSaving] = useState(false);
@@ -290,8 +290,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   };
   // Price lines on a screenshot: ask what price a line sits at (only until two lines set the scale; after that
   // every line knows its price). Blank skips. A tap on a placed price line asks again, to set or fix its price.
-  const askPrice = async (current?: number) => {
-    const said = await askFor('Price at this line?', current != null ? String(current) : '', { numeric: true, hint: 'Read it off the price axis. After two lines, the rest fill in by themselves. Leave blank to skip.' });
+  const askPrice = async (current?: number, onDelete?: () => void) => {
+    const said = await askFor('Price at this line?', current != null ? String(current) : '', { numeric: true, onDelete, hint: 'Read it off the price axis. After two lines, the rest fill in by themselves. Leave blank to skip.' });
     if (said == null) return undefined;
     const n = parseFloat(said.replace(/[,$\s]/g, ''));
     return isFinite(n) ? n : null; // null: cleared
@@ -306,16 +306,21 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       const sh = shapes[drag.index];
       const moved = sh ? Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]) : 99999;
       const wobble = Math.max(dim![0], dim![1]) / 60 / view.scale; // about a fingertip's slip
-      if (sh && moved < wobble && (sh.tool === 'arrow' || sh.tool === 'hline')) {
+      if (sh && moved < wobble) {
+        // A tap (no drag) on a placed shape opens its box: change its note / price / words, or Delete it
         setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig } : x))); // undo the wobble
-        const idx = drag.index;
+        const k = drag.index; // stays put: nothing else can change the list while the box is open
+        const patch = (p: Partial<Shape>) => setShapes(list => list.map((x, i) => (i === k ? { ...x, ...p } : x)));
+        const remove = () => { setShapes(list => list.filter((_, i) => i !== k)); setAsk(null); };
         if (sh.tool === 'arrow') {
-          // Tap a placed arrow (no drag) to write or change its note; blank removes it
-          void askFor('Note for this arrow', sh.text || '', { hint: 'Leave blank for none.' }).then(said => {
-            if (said != null) setShapes(list => list.map((x, i) => (i === idx ? { ...x, text: said.trim() || undefined } : x)));
-          });
+          void askFor('Note for this arrow', sh.text || '', { hint: 'Leave blank for none.', onDelete: remove }).then(said => { if (said != null) patch({ text: said.trim() || undefined }); });
+        } else if (sh.tool === 'hline') {
+          void askPrice(sh.price, remove).then(n => { if (n !== undefined) patch({ price: n ?? undefined }); });
+        } else if (sh.tool === 'text') {
+          void askFor('Text', sh.text || '', { onDelete: remove }).then(said => { if (said != null) { if (said.trim()) patch({ text: said.trim() }); else remove(); } });
         } else {
-          void askPrice(sh.price).then(n => { if (n !== undefined) setShapes(list => list.map((x, i) => (i === idx ? { ...x, price: n ?? undefined } : x))); });
+          const name = sh.tool === 'oval' ? 'circle' : sh.tool;
+          void askFor(`This ${name}`, '', { noInput: true, hint: 'Drag it to move it, or delete it.', onDelete: remove });
         }
       }
       return;
@@ -363,12 +368,13 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
           <form className="w-full max-w-sm rounded-xl bg-neutral-900 border border-white/20 p-4 space-y-3 shadow-2xl" onSubmit={e => { e.preventDefault(); answer(ask.value); }}>
             <div className="font-semibold">{ask.title}</div>
             {ask.hint && <p className="text-xs text-white/50 -mt-2">{ask.hint}</p>}
-            <input autoFocus value={ask.value} onChange={e => setAsk({ ...ask, value: e.target.value })} inputMode={ask.numeric ? 'decimal' : 'text'}
+            {!ask.noInput && <input autoFocus value={ask.value} onChange={e => setAsk({ ...ask, value: e.target.value })} inputMode={ask.numeric ? 'decimal' : 'text'}
               onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); answer(null); } }}
-              className="w-full rounded-lg bg-black border border-white/25 px-3 py-2.5 text-base text-white outline-none focus:border-edge" />
+              className="w-full rounded-lg bg-black border border-white/25 px-3 py-2.5 text-base text-white outline-none focus:border-edge" />}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => answer(null)} className="rounded-lg px-4 py-2 text-sm text-white/70 border border-white/20">Skip</button>
-              <button type="submit" className="btn-edge !h-9 !px-5">OK</button>
+              {ask.onDelete && <button type="button" onClick={ask.onDelete} className="mr-auto flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 border border-red-500/50"><Trash2 className="w-4 h-4" />Delete</button>}
+              <button type="button" onClick={() => answer(null)} className="rounded-lg px-4 py-2 text-sm text-white/70 border border-white/20">{ask.noInput ? 'Cancel' : 'Skip'}</button>
+              {!ask.noInput && <button type="submit" className="btn-edge !h-9 !px-5">OK</button>}
             </div>
           </form>
         </div>
