@@ -157,6 +157,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   useEffect(() => {
     const h = () => setFull(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', h);
+    // Editing opens full screen (the tap that opened this still counts as permission); if the browser says no, the button is there
+    if (!document.fullscreenElement && matchMedia('(pointer: coarse)').matches) void root.current?.requestFullscreen?.().catch(() => {});
     return () => { document.removeEventListener('fullscreenchange', h); if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); };
   }, []);
   const toggleFull = () => {
