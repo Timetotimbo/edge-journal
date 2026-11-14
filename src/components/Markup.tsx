@@ -106,6 +106,15 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
         g.lineTo(b[0] - h * Math.cos(t - 0.45), b[1] - h * Math.sin(t - 0.45));
         g.lineTo(b[0] - h * Math.cos(t + 0.45), b[1] - h * Math.sin(t + 0.45));
         g.closePath(); g.fill();
+        if (s.text) {
+          // The arrow's note sits at its tail, out past the end, so the head still points at clear chart
+          const px = s.w * 6, right = b[0] >= a[0];
+          g.font = `600 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = right ? 'right' : 'left';
+          const x = a[0] + (right ? -px * 0.4 : px * 0.4);
+          g.lineWidth = px / 6; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
+          g.strokeText(s.text, x, a[1]); g.fillStyle = s.color; g.fillText(s.text, x, a[1]);
+          g.textAlign = 'left';
+        }
       }
     }
   }
@@ -254,7 +263,11 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       dragShape.current = null;
       const sh = shapes[drag.index];
       const moved = sh && Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]);
-      if (sh?.tool === 'hline' && moved < 3) {
+      if (sh?.tool === 'arrow' && moved < 3) {
+        // Tap a placed arrow (no drag) to write a note on it; blank removes the note
+        const said = prompt('Note for this arrow', sh.text || '');
+        if (said != null) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, text: said.trim() || undefined } : x)));
+      } else if (sh?.tool === 'hline' && moved < 3) {
         const n = askPrice(sh.price);
         if (n !== undefined) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, price: n ?? undefined } : x)));
       }
