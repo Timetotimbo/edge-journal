@@ -6,7 +6,9 @@ import { ArrowUpRight, Circle, Minus, Pencil, Scan, SeparatorHorizontal, Square,
 // colours. Everything is kept as a list of shapes in the picture's own pixels (so undo works, pinch-zoom is just a
 // view on top of the same data, and the saved copy is full size), and Save hands back a JPEG.
 type Tool = 'pen' | 'line' | 'hline' | 'arrow' | 'oval' | 'box' | 'text';
-type Shape = { tool: Tool; color: string; w: number; pts: [number, number][]; text?: string };
+// price: on a price line, the price the trader typed for it (read off the screenshot's price axis). Two of those set the
+// chart's scale, and from then on every price line shows its own price, even dragged.
+type Shape = { tool: Tool; color: string; w: number; pts: [number, number][]; text?: string; price?: number };
 type View = { scale: number; x: number; y: number };
 
 const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['oval', 'Circle', Circle], ['box', 'Box', Square], ['text', 'Text', Type]];
@@ -47,8 +49,21 @@ function hitIndex(shapes: Shape[], p: [number, number], g: CanvasRenderingContex
   return -1;
 }
 
+/** The price at a height on the picture, once two price lines at different heights have a typed price. */
+function priceScale(shapes: Shape[]): ((y: number) => number) | null {
+  const known = shapes.filter(s => s.tool === 'hline' && s.price != null);
+  for (let i = known.length - 1; i > 0; i--) for (let j = i - 1; j >= 0; j--) {
+    const [a, b] = [known[i], known[j]];
+    const dy = b.pts[0][1] - a.pts[0][1];
+    if (Math.abs(dy) > 4) return y => a.price! + ((y - a.pts[0][1]) / dy) * (b.price! - a.price!);
+  }
+  return null;
+}
+const fmtPrice = (n: number) => (Math.round(n * 4) / 4).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H: number, shapes: Shape[]) {
   g.drawImage(img, 0, 0, W, H);
+  const scale = priceScale(shapes);
   g.lineCap = 'round'; g.lineJoin = 'round';
   for (const s of shapes) {
     const [a, b] = [s.pts[0], s.pts[s.pts.length - 1]];
@@ -66,7 +81,20 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
       g.ellipse((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.max(1, Math.abs(b[0] - a[0]) / 2), Math.max(1, Math.abs(b[1] - a[1]) / 2), 0, 0, Math.PI * 2);
       g.stroke();
     }
-    else if (s.tool === 'hline') { g.beginPath(); g.moveTo(0, a[1]); g.lineTo(W, a[1]); g.stroke(); }
+    else if (s.tool === 'hline') {
+      g.beginPath(); g.moveTo(0, a[1]); g.lineTo(W, a[1]); g.stroke();
+      const price = s.price ?? scale?.(a[1]);
+      if (price != null && isFinite(price)) {
+        // A price tag on the left end of the line, in the line's colour
+        const px = Math.max(W, H) / 42, t = fmtPrice(price);
+        g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle';
+        const tw = g.measureText(t).width, pad = px * 0.35, h = px * 1.4;
+        const y = Math.min(H - h / 2, Math.max(h / 2, a[1]));
+        g.fillStyle = s.color; g.fillRect(0, y - h / 2, tw + pad * 2, h);
+        g.fillStyle = ['#ffffff', '#facc15', '#22c55e', '#38bdf8', '#ff8a1f'].includes(s.color) ? '#000000' : '#ffffff';
+        g.fillText(t, pad, y);
+      }
+    }
     else {
       g.beginPath(); g.moveTo(a[0], a[1]);
       if (s.tool === 'pen') { for (const p of s.pts.slice(1)) g.lineTo(p[0], p[1]); if (s.pts.length === 1) g.lineTo(a[0] + 0.01, a[1]); }
@@ -209,14 +237,33 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     if (s.tool === 'pen') s.pts.push(p); else if (s.tool === 'hline') s.pts[0] = p; else s.pts[1] = p;
     redraw();
   };
+  // Price lines on a screenshot: ask what price a line sits at (only until two lines set the scale; after that
+  // every line knows its price). Blank skips. A tap on a placed price line asks again, to set or fix its price.
+  const askPrice = (current?: number) => {
+    const said = prompt('Price at this line? Read it off the price axis. After two lines, the rest fill in by themselves. Leave blank to skip.', current != null ? String(current) : '');
+    if (said == null) return undefined;
+    const n = parseFloat(said.replace(/[,$\s]/g, ''));
+    return isFinite(n) ? n : null; // null: cleared
+  };
   const up = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) gesture.current = null;
     if (pointers.current.size > 0) return; // another finger is still down (mid-pinch, or about to be)
-    if (dragShape.current) { dragShape.current = null; return; }
+    const drag = dragShape.current;
+    if (drag) {
+      dragShape.current = null;
+      const sh = shapes[drag.index];
+      const moved = sh && Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]);
+      if (sh?.tool === 'hline' && moved < 3) {
+        const n = askPrice(sh.price);
+        if (n !== undefined) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, price: n ?? undefined } : x)));
+      }
+      return;
+    }
     const s = live.current;
     if (!s) return;
     live.current = null;
+    if (s.tool === 'hline' && !priceScale(shapes)) { const n = askPrice(); if (n != null) s.price = n; }
     setShapes(list => [...list, s]);
   };
 
