@@ -124,6 +124,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     const c = canvas.current, g = c?.getContext('2d');
     if (!c || !g || !img.current || !dim) return;
     g.save();
+    // Wipe first: wherever the zoomed picture doesn't reach would otherwise keep old frames (stacked copies of the chart)
+    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, dim[0], dim[1]);
     g.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
     paint(g, img.current, dim[0], dim[1], live.current ? [...list, live.current] : list);
     g.restore();
@@ -153,7 +155,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
 
   const down = (e: React.PointerEvent) => {
     if (!dim) return;
-    canvas.current!.setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const cp = canvasPt(e);
     pointers.current.set(e.pointerId, cp);
     if (pointers.current.size >= 2) {
@@ -187,7 +189,10 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       const scale = Math.min(MAX_ZOOM, Math.max(1, gesture.current.startView.scale * (dist / gesture.current.startDist)));
       const [wx, wy] = gesture.current.startMidWorld;
       // Keep the world point under the fingers' midpoint fixed under them — the usual pinch feel, pan included
-      setView({ scale, x: mid[0] - wx * scale, y: mid[1] - wy * scale });
+      // ...but never past the picture's edges, so the frame is always all chart
+      const [W, H] = dim!;
+      const clamp = (v: number, size: number) => Math.min(0, Math.max(size - size * scale, v));
+      setView({ scale, x: clamp(mid[0] - wx * scale, W), y: clamp(mid[1] - wy * scale, H) });
       return;
     }
     const drag = dragShape.current;
@@ -242,8 +247,11 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         <button onClick={() => void save()} disabled={saving || !dim} className="btn-edge !h-9 !px-4">{saving ? 'Saving…' : 'Save'}</button>
       </div>
       {err && <p className="px-3 py-1.5 text-sm text-red-400">{err}</p>}
-      <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-hidden relative">
-        {dim ? <canvas ref={canvas} width={dim[0]} height={dim[1]} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      {/* Fingers are read on this whole area, not just the chart: a pinch's second finger often lands beside a narrow
+          phone screenshot, and if only the chart listened, the first finger kept drawing stray lines */}
+      <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-hidden relative touch-none select-none"
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+        {dim ? <canvas ref={canvas} width={dim[0]} height={dim[1]}
           className="max-w-full max-h-full rounded touch-none select-none" style={{ cursor: tool === 'text' ? 'text' : 'crosshair' }} />
           : !err && <span className="text-sm text-white/60">Opening…</span>}
         {zoomed && <span className="absolute bottom-3 right-3 text-xs bg-black/70 rounded px-1.5 py-0.5 text-white/70">{Math.round(view.scale * 100)}%</span>}
