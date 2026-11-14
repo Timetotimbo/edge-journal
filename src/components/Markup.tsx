@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Circle, Minus, Pencil, Scan, SeparatorHorizontal, Square, Trash2, Type, Undo2, X } from 'lucide-react';
+import { ArrowUpRight, Circle, Maximize, Minimize, Minus, Pencil, ZoomOut, SeparatorHorizontal, Square, Trash2, Type, Undo2, X } from 'lucide-react';
 
 // Draw on a chart picture: freehand, straight lines, arrows, boxes, a full-width price line, and text, in a few
 // colours. Everything is kept as a list of shapes in the picture's own pixels (so undo works, pinch-zoom is just a
@@ -151,6 +151,18 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState(4);
   const [err, setErr] = useState('');
+  // Full screen: the whole phone screen for the chart, no browser bars
+  const root = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    const h = () => setFull(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => { document.removeEventListener('fullscreenchange', h); if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); };
+  }, []);
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void root.current?.requestFullscreen?.().catch(() => setErr("This browser won't go full screen.")); 
+  };
   // The app's own text box (the browser's prompt() can be silenced by the phone after a few, and looks out of place)
   const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; resolve: (v: string | null) => void } | null>(null);
   const askOpen = useRef(false);
@@ -333,11 +345,12 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const zoomed = view.scale !== 1 || view.x !== 0 || view.y !== 0;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] bg-black flex flex-col text-white" onClick={e => e.stopPropagation()} onPaste={e => e.stopPropagation()}>
+    <div ref={root} className="fixed inset-0 z-[70] bg-black flex flex-col text-white" onClick={e => e.stopPropagation()} onPaste={e => e.stopPropagation()}>
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/15">
         <button onClick={onClose} aria-label="Close without saving" className="p-2 -ml-2"><X className="w-5 h-5" /></button>
         <span className="font-semibold text-sm">Mark up chart</span>
-        <button onClick={() => setView({ scale: 1, x: 0, y: 0 })} disabled={!zoomed} aria-label="Reset zoom" className="ml-auto p-2 disabled:opacity-30"><Scan className="w-5 h-5" /></button>
+        <button onClick={() => setView({ scale: 1, x: 0, y: 0 })} disabled={!zoomed} aria-label="Reset zoom" title="Reset zoom" className="ml-auto p-2 disabled:opacity-30"><ZoomOut className="w-5 h-5" /></button>
+        <button onClick={toggleFull} aria-label={full ? 'Exit full screen' : 'Full screen'} title={full ? 'Exit full screen' : 'Full screen'} className="p-2">{full ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
         <button onClick={() => setShapes(s => s.slice(0, -1))} disabled={!shapes.length} aria-label="Undo" className="p-2 disabled:opacity-30"><Undo2 className="w-5 h-5" /></button>
         <button onClick={() => shapes.length && confirm('Erase everything you drew?') && setShapes([])} disabled={!shapes.length} aria-label="Erase all" className="p-2 disabled:opacity-30"><Trash2 className="w-5 h-5" /></button>
         <button onClick={() => void save()} disabled={saving || !dim} className="btn-edge !h-9 !px-4">{saving ? 'Saving…' : 'Save'}</button>
@@ -368,7 +381,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         {zoomed && <span className="absolute bottom-3 right-3 text-xs bg-black/70 rounded px-1.5 py-0.5 text-white/70">{Math.round(view.scale * 100)}%</span>}
       </div>
       <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-white/15 space-y-2">
-        <p className="text-[11px] text-white/40 -mb-0.5">Two fingers: pinch to zoom, drag to pan</p>
+        {!full && <p className="text-[11px] text-white/40 -mb-0.5">Two fingers: pinch to zoom, drag to pan</p>}
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {TOOLS.map(([k, label, Icon]) => (
             <button key={k} onClick={() => setTool(k)} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium border shrink-0 ${tool === k ? 'border-edge bg-edge/20 text-edge' : 'border-white/20 text-white/80'}`}><Icon className="w-4 h-4" />{label}</button>
