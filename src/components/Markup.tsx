@@ -108,12 +108,15 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
         g.closePath(); g.fill();
         if (s.text) {
           // The arrow's note sits at its tail, out past the end, so the head still points at clear chart
-          const px = s.w * 6, right = b[0] >= a[0];
-          g.font = `600 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = right ? 'right' : 'left';
-          const x = a[0] + (right ? -px * 0.4 : px * 0.4);
-          g.lineWidth = px / 6; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
-          g.strokeText(s.text, x, a[1]); g.fillStyle = s.color; g.fillText(s.text, x, a[1]);
-          g.textAlign = 'left';
+          // (kept inside the picture: an arrow starting near an edge would otherwise push its note off it)
+          const px = Math.max(s.w * 6, Math.max(W, H) / 40), right = b[0] >= a[0];
+          g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'left';
+          const tw = g.measureText(s.text).width, gap = px * 0.4;
+          let x = right ? a[0] - gap - tw : a[0] + gap, y = a[1];
+          if (x < gap || x + tw > W - gap) { x = Math.min(W - gap - tw, Math.max(gap, a[0] - tw / 2)); y = a[1] + (b[1] <= a[1] ? px : -px); }
+          y = Math.min(H - px, Math.max(px, y));
+          g.lineWidth = px / 5; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
+          g.strokeText(s.text, x, y); g.fillStyle = s.color; g.fillText(s.text, x, y);
         }
       }
     }
@@ -262,14 +265,15 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     if (drag) {
       dragShape.current = null;
       const sh = shapes[drag.index];
-      const moved = sh && Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]);
-      if (sh?.tool === 'arrow' && moved < 3) {
+      const moved = sh ? Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]) : 99999;
+      const wobble = Math.max(dim![0], dim![1]) / 60 / view.scale; // about a fingertip's slip
+      if (sh?.tool === 'arrow' && moved < wobble) {
         // Tap a placed arrow (no drag) to write a note on it; blank removes the note
         const said = prompt('Note for this arrow', sh.text || '');
-        if (said != null) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, text: said.trim() || undefined } : x)));
-      } else if (sh?.tool === 'hline' && moved < 3) {
+        if (said != null) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig, text: said.trim() || undefined } : x)));
+      } else if (sh?.tool === 'hline' && moved < wobble) {
         const n = askPrice(sh.price);
-        if (n !== undefined) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, price: n ?? undefined } : x)));
+        if (n !== undefined) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig, price: n ?? undefined } : x)));
       }
       return;
     }
