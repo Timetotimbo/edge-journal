@@ -151,6 +151,13 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState(4);
   const [err, setErr] = useState('');
+  // The app's own text box (the browser's prompt() can be silenced by the phone after a few, and looks out of place)
+  const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; resolve: (v: string | null) => void } | null>(null);
+  const askOpen = useRef(false);
+  askOpen.current = !!ask;
+  const askFor = (title: string, value = '', more: { hint?: string; numeric?: boolean } = {}) =>
+    new Promise<string | null>(resolve => setAsk({ title, value, ...more, resolve }));
+  const answer = (v: string | null) => { ask?.resolve(v); setAsk(null); };
   const [saving, setSaving] = useState(false);
 
   // Load the picture (downloaded first, so drawing it never locks the canvas)
@@ -186,6 +193,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   // Escape closes this, not the trade behind it; Ctrl+Z undoes
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (askOpen.current) return; // the note box handles its own keys
       if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); setShapes(s => s.slice(0, -1)); }
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.stopPropagation();
@@ -222,8 +230,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       if (hit !== -1) { dragShape.current = { index: hit, start: p, orig: shapes[hit].pts.map(q => [...q] as [number, number]) }; return; }
     }
     if (tool === 'text') {
-      const text = prompt('Text to add')?.trim();
-      if (text) setShapes(s => [...s, { tool, color, w: width(), pts: [p], text }]);
+      const shape: Shape = { tool, color, w: width(), pts: [p] };
+      void askFor('Text to add').then(t => { if (t?.trim()) setShapes(s => [...s, { ...shape, text: t.trim() }]); });
       return;
     }
     live.current = { tool, color, w: width(), pts: [p] };
@@ -268,8 +276,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   };
   // Price lines on a screenshot: ask what price a line sits at (only until two lines set the scale; after that
   // every line knows its price). Blank skips. A tap on a placed price line asks again, to set or fix its price.
-  const askPrice = (current?: number) => {
-    const said = prompt('Price at this line? Read it off the price axis. After two lines, the rest fill in by themselves. Leave blank to skip.', current != null ? String(current) : '');
+  const askPrice = async (current?: number) => {
+    const said = await askFor('Price at this line?', current != null ? String(current) : '', { numeric: true, hint: 'Read it off the price axis. After two lines, the rest fill in by themselves. Leave blank to skip.' });
     if (said == null) return undefined;
     const n = parseFloat(said.replace(/[,$\s]/g, ''));
     return isFinite(n) ? n : null; // null: cleared
@@ -284,27 +292,28 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       const sh = shapes[drag.index];
       const moved = sh ? Math.abs(sh.pts[0][1] - drag.orig[0][1]) + Math.abs(sh.pts[0][0] - drag.orig[0][0]) : 99999;
       const wobble = Math.max(dim![0], dim![1]) / 60 / view.scale; // about a fingertip's slip
-      if (sh?.tool === 'arrow' && moved < wobble) {
-        // Tap a placed arrow (no drag) to write a note on it; blank removes the note
-        const said = prompt('Note for this arrow', sh.text || '');
-        if (said != null) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig, text: said.trim() || undefined } : x)));
-      } else if (sh?.tool === 'hline' && moved < wobble) {
-        const n = askPrice(sh.price);
-        if (n !== undefined) setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig, price: n ?? undefined } : x)));
+      if (sh && moved < wobble && (sh.tool === 'arrow' || sh.tool === 'hline')) {
+        setShapes(list => list.map((x, i) => (i === drag.index ? { ...x, pts: drag.orig } : x))); // undo the wobble
+        const idx = drag.index;
+        if (sh.tool === 'arrow') {
+          // Tap a placed arrow (no drag) to write or change its note; blank removes it
+          void askFor('Note for this arrow', sh.text || '', { hint: 'Leave blank for none.' }).then(said => {
+            if (said != null) setShapes(list => list.map((x, i) => (i === idx ? { ...x, text: said.trim() || undefined } : x)));
+          });
+        } else {
+          void askPrice(sh.price).then(n => { if (n !== undefined) setShapes(list => list.map((x, i) => (i === idx ? { ...x, price: n ?? undefined } : x))); });
+        }
       }
       return;
     }
     const s = live.current;
     if (!s) return;
     live.current = null;
-    if (s.tool === 'hline' && !priceScale(shapes)) { const n = askPrice(); if (n != null) s.price = n; }
-    if (s.tool === 'arrow' && s.pts.length > 1) {
-      // A finished arrow asks for its note right away; Cancel or blank leaves it without one (tap it later to add)
-      const note = prompt('Note for this arrow (leave blank for none)', '')?.trim();
-      if (note) s.text = note;
-      redraw([...shapes, s]);
-    }
     setShapes(list => [...list, s]);
+    const set = (patch: Partial<Shape>) => setShapes(list => list.map(x => (x === s ? { ...x, ...patch } : x)));
+    if (s.tool === 'hline' && !priceScale(shapes)) void askPrice().then(n => { if (n != null) set({ price: n }); });
+    // A finished arrow asks for its note right away; Skip or blank leaves it without one (tap it later to add)
+    if (s.tool === 'arrow' && s.pts.length > 1) void askFor('Note for this arrow', '', { hint: 'Leave blank for none.' }).then(t => { if (t?.trim()) set({ text: t.trim() }); });
   };
 
   const save = async () => {
@@ -334,6 +343,21 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         <button onClick={() => void save()} disabled={saving || !dim} className="btn-edge !h-9 !px-4">{saving ? 'Saving…' : 'Save'}</button>
       </div>
       {err && <p className="px-3 py-1.5 text-sm text-red-400">{err}</p>}
+      {ask && (
+        <div className="absolute inset-0 z-10 bg-black/50 flex items-start justify-center p-4 pt-20" onPointerDown={e => { if (e.target === e.currentTarget) answer(null); }}>
+          <form className="w-full max-w-sm rounded-xl bg-neutral-900 border border-white/20 p-4 space-y-3 shadow-2xl" onSubmit={e => { e.preventDefault(); answer(ask.value); }}>
+            <div className="font-semibold">{ask.title}</div>
+            {ask.hint && <p className="text-xs text-white/50 -mt-2">{ask.hint}</p>}
+            <input autoFocus value={ask.value} onChange={e => setAsk({ ...ask, value: e.target.value })} inputMode={ask.numeric ? 'decimal' : 'text'}
+              onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); answer(null); } }}
+              className="w-full rounded-lg bg-black border border-white/25 px-3 py-2.5 text-base text-white outline-none focus:border-edge" />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => answer(null)} className="rounded-lg px-4 py-2 text-sm text-white/70 border border-white/20">Skip</button>
+              <button type="submit" className="btn-edge !h-9 !px-5">OK</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* Fingers are read on this whole area, not just the chart: a pinch's second finger often lands beside a narrow
           phone screenshot, and if only the chart listened, the first finger kept drawing stray lines */}
       <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-hidden relative touch-none select-none"
