@@ -257,7 +257,13 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     if (!s) return;
     const p = toWorld(cp);
     // A price line follows the pointer directly while it's being placed, rather than stretching from a fixed start
-    if (s.tool === 'pen') s.pts.push(p); else if (s.tool === 'hline') s.pts[0] = p; else s.pts[1] = p;
+    if (s.tool === 'arrow' && e.pointerType !== 'mouse') {
+      // On a phone the head would sit under the fingertip: draw it a fingertip's length further on, so it's visible
+      const a = s.pts[0], dx = p[0] - a[0], dy = p[1] - a[1], len = Math.hypot(dx, dy);
+      const r = canvas.current!.getBoundingClientRect();
+      const reach = (44 * (dim![0] / r.width)) / view.scale; // 44 screen pixels, in picture pixels
+      s.pts[1] = len > 1 ? [p[0] + (dx / len) * reach, p[1] + (dy / len) * reach] : p;
+    } else if (s.tool === 'pen') s.pts.push(p); else if (s.tool === 'hline') s.pts[0] = p; else s.pts[1] = p;
     redraw();
   };
   // Price lines on a screenshot: ask what price a line sits at (only until two lines set the scale; after that
@@ -292,6 +298,12 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     if (!s) return;
     live.current = null;
     if (s.tool === 'hline' && !priceScale(shapes)) { const n = askPrice(); if (n != null) s.price = n; }
+    if (s.tool === 'arrow' && s.pts.length > 1) {
+      // A finished arrow asks for its note right away; Cancel or blank leaves it without one (tap it later to add)
+      const note = prompt('Note for this arrow (leave blank for none)', '')?.trim();
+      if (note) s.text = note;
+      redraw([...shapes, s]);
+    }
     setShapes(list => [...list, s]);
   };
 
