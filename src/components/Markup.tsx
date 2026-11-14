@@ -109,14 +109,25 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
         if (s.text) {
           // The arrow's note sits at its tail, out past the end, so the head still points at clear chart
           // (kept inside the picture: an arrow starting near an edge would otherwise push its note off it)
-          const px = Math.max(s.w * 6, Math.max(W, H) / 40), right = b[0] >= a[0];
-          g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'left';
-          const tw = g.measureText(s.text).width, gap = px * 0.4;
-          let x = right ? a[0] - gap - tw : a[0] + gap, y = a[1];
-          if (x < gap || x + tw > W - gap) { x = Math.min(W - gap - tw, Math.max(gap, a[0] - tw / 2)); y = a[1] + (b[1] <= a[1] ? px : -px); }
-          y = Math.min(H - px, Math.max(px, y));
-          g.lineWidth = px / 5; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000';
-          g.strokeText(s.text, x, y); g.fillStyle = s.color; g.fillText(s.text, x, y);
+          // Smallish, two or three words to a line, so a note sits beside the action instead of across it
+          const px = Math.max(s.w * 4, Math.max(W, H) / 62), right = b[0] >= a[0], lh = px * 1.15;
+          g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle';
+          const lines: string[] = [];
+          for (const word of s.text.split(/\s+/)) {
+            const last = lines[lines.length - 1];
+            if (last != null && last.split(' ').length < 3 && (last + ' ' + word).length <= 16) lines[lines.length - 1] = `${last} ${word}`;
+            else lines.push(word);
+          }
+          const tw = Math.max(...lines.map(l => g.measureText(l).width)), th = lines.length * lh, gap = px * 0.5;
+          let x = right ? a[0] - gap - tw : a[0] + gap, y = a[1] - th / 2; // block's left and top
+          let align: CanvasTextAlign = right ? 'right' : 'left';
+          if (x < gap || x + tw > W - gap) { x = Math.min(W - gap - tw, Math.max(gap, a[0] - tw / 2)); y = b[1] <= a[1] ? a[1] + gap : a[1] - gap - th; align = 'center'; }
+          y = Math.min(H - th - gap, Math.max(gap, y));
+          g.textAlign = align;
+          const ax = align === 'right' ? x + tw : align === 'center' ? x + tw / 2 : x;
+          g.lineWidth = px / 4; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000'; g.fillStyle = s.color;
+          lines.forEach((l, k) => { const ly = y + lh * (k + 0.5); g.strokeText(l, ax, ly); g.fillText(l, ax, ly); });
+          g.textAlign = 'left';
         }
       }
     }
