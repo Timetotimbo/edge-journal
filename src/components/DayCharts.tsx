@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ImagePlus, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Markup from './Markup';
+import { dayOf } from '../lib/stats';
 
 // Chart pictures kept with a trading day (levels before the open, how the day played out), with a tool to draw on them.
 // They live in the private tj-shots bucket under <user>/day-<yyyy-mm-dd>/, so the folder itself is the list.
@@ -25,6 +26,19 @@ export default function DayCharts({ day }: { day: string }) {
     setShots((links || []).filter(l => l.path && l.signedUrl).map(l => ({ path: l.path as string, url: l.signedUrl as string })));
   };
   useEffect(() => { void load().catch(() => {}); }, [day]);
+  // A picture shared from the phone's gallery (Share → Edge Journal) opens straight into Mark up on today
+  useEffect(() => {
+    if (day !== dayOf(new Date().toISOString()) || !new URLSearchParams(location.search).has('shared')) return;
+    history.replaceState(null, '', location.pathname + location.hash);
+    void (async () => {
+      const cache = await caches.open('shared-chart');
+      const hit = await cache.match('/shared-chart');
+      if (!hit) return;
+      await cache.delete('/shared-chart');
+      setMarking(await hit.blob());
+      setTimeout(() => document.getElementById(`day-${day}`)?.scrollIntoView({ block: 'start' }), 50);
+    })().catch(() => {});
+  }, [day]);
 
   const run = async (f: () => Promise<void>) => {
     setBusy(true); setErr('');
