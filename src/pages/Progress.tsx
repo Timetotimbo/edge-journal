@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Target } from 'lucide-react';
 import type { Trade } from '../lib/types';
-import { money, pct, pnlClass, summarize } from '../lib/stats';
+import { money, pct, pnlClass } from '../lib/stats';
 import { cutLosers, type CutResult } from '../lib/whatif';
 import { byYear, coach, review, verdict, type DayTypes, type Review } from '../lib/review';
 
@@ -47,12 +47,13 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
   useEffect(() => { fetch('/bars/days.json').then(r => (r.ok ? r.json() : null)).then(setTypes).catch(() => setTypes(null)); }, []);
   const years = useMemo(() => byYear(every).map(([y, ts]) => [y, review(ts)] as [string, Review]), [every]);
   const r = useMemo(() => review(trades), [trades]);
-  // Each year's net had its losers been closed at that year's average winner hold (priced from the 1-minute bars)
+  // Each year's net had its losers been closed at that year's typical (median) winner hold, the same figure as the
+  // "Hold: winners" row above, priced from the 1-minute bars. (The mean was used before: a few long-held winners pulled it far past the typical one.)
   const [cuts, setCuts] = useState<Record<string, CutResult | null> | null>(null);
   useEffect(() => {
     let gone = false;
     setCuts(null);
-    void Promise.all(byYear(every).map(async ([y, ts]) => { const w = summarize(ts).avgHoldWin; return [y, w ? await cutLosers(ts, w) : null] as const; }))
+    void Promise.all(byYear(every).map(async ([y, ts]) => { const w = review(ts).holdWin; return [y, w ? await cutLosers(ts, w) : null] as const; }))
       .then(rs => { if (!gone) setCuts(Object.fromEntries(rs)); });
     return () => { gone = true; };
   }, [every]);
@@ -109,7 +110,7 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
           </table>
         </div>
         <p className="text-xs text-mute">
-          Projected net: what each year would have made if every loser that ran longer than that year’s average winner had been closed at that point, priced from the 1-minute chart. Losers with no chart data keep their real result.
+          Projected net: what each year would have made if every loser that ran longer than that year’s typical winner (the “Hold: winners” time above) had been closed at that point, priced from the 1-minute chart. Losers with no chart data keep their real result.
           {cutAll && cutNet !== null && <> All years together: <span className={`num font-semibold ${pnlClass(cutNet)}`}>{money(cutNet, true)}</span> (<span className={`num ${pnlClass(cutAll.delta)}`}>{money(cutAll.delta, true)}</span> vs actual), {cutAll.cut} losers re-priced{cutAll.missing ? `, ${cutAll.missing} without chart data` : ''}.</>}
         </p>
       </section>
