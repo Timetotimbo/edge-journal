@@ -3,6 +3,7 @@ import { ImagePlus, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Markup from './Markup';
 import { dayOf } from '../lib/stats';
+import { CHARTS_CHANGED, uploadCharts } from '../lib/charts';
 
 // Chart pictures kept with a trading day (levels before the open, how the day played out), with a tool to draw on them.
 // They live in the private tj-shots bucket under <user>/day-<yyyy-mm-dd>/, so the folder itself is the list.
@@ -25,17 +26,28 @@ export default function DayCharts({ day }: { day: string }) {
     const { data: links } = await supabase.storage.from('tj-shots').createSignedUrls(paths, 3600);
     setShots((links || []).filter(l => l.path && l.signedUrl).map(l => ({ path: l.path as string, url: l.signedUrl as string })));
   };
-  useEffect(() => { void load().catch(() => {}); }, [day]);
+  useEffect(() => {
+    const h = () => void load().catch(() => {});
+    h(); addEventListener(CHARTS_CHANGED, h);
+    return () => removeEventListener(CHARTS_CHANGED, h);
+  }, [day]);
   // A picture shared from the phone's gallery (Share → Edge Journal) opens straight into Mark up on today
   useEffect(() => {
     if (day !== dayOf(new Date().toISOString()) || !new URLSearchParams(location.search).has('shared')) return;
     history.replaceState(null, '', location.pathname + location.hash);
     void (async () => {
       const cache = await caches.open('shared-chart');
-      const hit = await cache.match('/shared-chart');
-      if (!hit) return;
-      await cache.delete('/shared-chart');
-      setMarking(await hit.blob());
+      const keys = await cache.keys();
+      const files: File[] = [];
+      for (const k of keys) {
+        const hit = await cache.match(k);
+        if (hit) files.push(new File([await hit.blob()], decodeURIComponent(hit.headers.get('X-Name') || 'shared.png'), { type: hit.headers.get('Content-Type') || 'image/png', lastModified: Number(hit.headers.get('X-Modified')) || Date.now() }));
+        await cache.delete(k);
+      }
+      if (!files.length) return;
+      // One picture: mark it up. Several: file each under the day it was taken (Journal shows the progress there)
+      if (files.length === 1) setMarking(files[0]);
+      else { setBusy(true); try { await uploadCharts(files, () => {}); } finally { setBusy(false); } }
       setTimeout(() => document.getElementById(`day-${day}`)?.scrollIntoView({ block: 'start' }), 50);
     })().catch(() => {});
   }, [day]);

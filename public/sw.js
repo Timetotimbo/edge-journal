@@ -9,11 +9,10 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     try {
       const form = await e.request.formData();
-      const file = form.getAll('chart').find(f => f && typeof f !== 'string' && f.type.startsWith('image/'));
-      if (file) {
-        const cache = await caches.open('shared-chart');
-        await cache.put('/shared-chart', new Response(file, { headers: { 'Content-Type': file.type } }));
-      }
+      const files = form.getAll('chart').filter(f => f && typeof f !== 'string' && f.type.startsWith('image/'));
+      const cache = await caches.open('shared-chart');
+      // Each kept with its name and date, so a batch can be filed under the days the screenshots were taken
+      await Promise.all(files.map((f, i) => cache.put(`/shared-chart/${i}`, new Response(f, { headers: { 'Content-Type': f.type, 'X-Name': encodeURIComponent(f.name || ''), 'X-Modified': String(f.lastModified || '') } }))));
     } catch { /* open the journal anyway */ }
     return Response.redirect('/?shared=1#journal', 303);
   })());
