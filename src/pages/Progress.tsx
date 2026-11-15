@@ -103,7 +103,7 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
                 {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className={`p-2 text-right whitespace-nowrap ${c ? pnlClass(c.delta) : 'text-mute'}`}>{c ? money(c.delta, true) : cuts ? '–' : '…'}</td>; })}
               </tr>
               <tr>
-                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;cut at · losers re-priced</td>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;cut at · re-priced</td>
                 {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className="p-2 text-right whitespace-nowrap text-mute">{c ? `${mins(c.cutMin)} · ${c.cut}${c.missing ? ` of ${c.cut + c.missing}` : ''}` : cuts ? '–' : '…'}</td>; })}
               </tr>
             </tbody>
