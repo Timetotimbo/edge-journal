@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Target } from 'lucide-react';
 import type { Trade } from '../lib/types';
 import { money, pct, pnlClass } from '../lib/stats';
-import { cutLosers, type CutResult } from '../lib/whatif';
+import { cutLosers, timeStop, type CutResult, type StopResult } from '../lib/whatif';
 import { byYear, coach, review, verdict, type DayTypes, type Review } from '../lib/review';
 
 const ratio = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '∞');
@@ -50,13 +50,20 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
   // Each year's net had its losers been closed at that year's typical (median) winner hold, the same figure as the
   // "Hold: winners" row above, priced from the 1-minute bars. (The mean was used before: a few long-held winners pulled it far past the typical one.)
   const [cuts, setCuts] = useState<Record<string, CutResult | null> | null>(null);
+  // The realistic version: everything still red at that time is closed, including trades that later turned into winners
+  const [stops, setStops] = useState<Record<string, StopResult | null> | null>(null);
   useEffect(() => {
     let gone = false;
-    setCuts(null);
-    void Promise.all(byYear(every).map(async ([y, ts]) => { const w = review(ts).holdWin; return [y, w ? await cutLosers(ts, w) : null] as const; }))
+    setCuts(null); setStops(null);
+    const ys = byYear(every).map(([y, ts]) => [y, ts, review(ts).holdWin] as const);
+    void Promise.all(ys.map(async ([y, ts, w]) => [y, w ? await cutLosers(ts, w) : null] as const))
       .then(rs => { if (!gone) setCuts(Object.fromEntries(rs)); });
+    void Promise.all(ys.map(async ([y, ts, w]) => [y, w ? await timeStop(ts, w) : null] as const))
+      .then(rs => { if (!gone) setStops(Object.fromEntries(rs)); });
     return () => { gone = true; };
   }, [every]);
+  const stopAll = stops && Object.values(stops).reduce((a, c) => (c ? { delta: a.delta + c.delta, losers: a.losers + c.losers, winners: a.winners + c.winners, gaveUp: a.gaveUp + c.winnersGaveUp } : a), { delta: 0, losers: 0, winners: 0, gaveUp: 0 });
+  const stopNet = stops && years.reduce((a, [y, yr]) => a + (stops[y]?.net ?? yr.net), 0);
   const cutAll = cuts && Object.values(cuts).reduce((a, c) => (c ? { net: a.net + c.net, delta: a.delta + c.delta, cut: a.cut + c.cut, missing: a.missing + c.missing } : a), { net: 0, delta: 0, cut: 0, missing: 0 });
   const cutNet = cuts && years.reduce((a, [y, yr]) => a + (cuts[y]?.net ?? yr.net), 0);
   const findings = useMemo(() => coach(trades, types), [trades, types]);
@@ -106,12 +113,28 @@ export default function Progress({ every, trades, scope }: { every: Trade[]; tra
                 <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;cut at · re-priced</td>
                 {years.map(([y]) => { const c = cuts?.[y]; return <td key={y} className="p-2 text-right whitespace-nowrap text-mute">{c ? `${mins(c.cutMin)} · ${c.cut}${c.missing ? ` of ${c.cut + c.missing}` : ''}` : cuts ? '–' : '…'}</td>; })}
               </tr>
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">Projected net · red closed</td>
+                {years.map(([y]) => { const c = stops?.[y]; return <td key={y} className={`p-2 text-right whitespace-nowrap font-semibold ${c ? pnlClass(c.net) : 'text-mute'}`}>{c ? money(c.net, true) : stops ? '–' : '…'}</td>; })}
+              </tr>
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;vs actual</td>
+                {years.map(([y]) => { const c = stops?.[y]; return <td key={y} className={`p-2 text-right whitespace-nowrap ${c ? pnlClass(c.delta) : 'text-mute'}`}>{c ? money(c.delta, true) : stops ? '–' : '…'}</td>; })}
+              </tr>
+              <tr>
+                <td className="p-2 text-mute whitespace-nowrap sticky left-0 bg-card">&nbsp;&nbsp;losers · winners cut</td>
+                {years.map(([y]) => { const c = stops?.[y]; return <td key={y} className="p-2 text-right whitespace-nowrap text-mute">{c ? `${c.losers} · ${c.winners}` : stops ? '–' : '…'}</td>; })}
+              </tr>
             </tbody>
           </table>
         </div>
         <p className="text-xs text-mute">
           Projected net: what each year would have made if every loser that ran longer than that year’s typical winner (the “Hold: winners” time above) had been closed at that point, priced from the 1-minute chart. Losers with no chart data keep their real result.
           {cutAll && cutNet !== null && <> All years together: <span className={`num font-semibold ${pnlClass(cutNet)}`}>{money(cutNet, true)}</span> (<span className={`num ${pnlClass(cutAll.delta)}`}>{money(cutAll.delta, true)}</span> vs actual), {cutAll.cut} losers re-priced{cutAll.missing ? `, ${cutAll.missing} without chart data` : ''}.</>}
+        </p>
+        <p className="text-xs text-mute">
+          Red closed: the rule you could really follow. At that same time, every trade that was losing at that moment is closed, including ones that later came back to win. Trades that were green then keep their real result. “losers · winners cut” is how many of the closed trades really ended as losers (money saved) and as winners (money given up).
+          {stopAll && stopNet !== null && <> All years together: <span className={`num font-semibold ${pnlClass(stopNet)}`}>{money(stopNet, true)}</span> (<span className={`num ${pnlClass(stopAll.delta)}`}>{money(stopAll.delta, true)}</span> vs actual); {stopAll.losers} losers cut, {stopAll.winners} winners cut short, giving up <span className="num">{money(stopAll.gaveUp)}</span>.</>}
         </p>
       </section>
 

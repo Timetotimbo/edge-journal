@@ -63,3 +63,32 @@ export async function cutLosers(trades: Trade[], cutMin: number): Promise<CutRes
   }));
   return { cutMin, net: actual + delta, delta, cut, better, missing: late.length - cut };
 }
+
+/**
+ * The rule you could really follow: "if it's red at the cut-off, get out." Every trade still open at the cut-off that was
+ * losing at that moment is closed there, winners included (some of them would have come back). Trades that were green
+ * at the cut-off, or already closed, keep their real result; so do trades with no price history for that minute.
+ */
+export type StopResult = {
+  cutMin: number; net: number; delta: number;
+  /** Trades closed by the rule; of those, how many really ended as losers (saved) or winners (cut short), and what the winners gave up */
+  cut: number; losers: number; winners: number; winnersGaveUp: number; missing: number;
+};
+
+export async function timeStop(trades: Trade[], cutMin: number): Promise<StopResult> {
+  const cutMs = cutMin * 60000;
+  const open = trades.filter(t => t.asset === 'future' && timed(t) && Date.parse(t.exit_at!) - Date.parse(t.entry_at) > cutMs);
+  const actual = trades.reduce((s, t) => s + Number(t.net_pnl), 0);
+  let delta = 0, cut = 0, losers = 0, winners = 0, gaveUp = 0, missing = 0;
+  await Promise.all(open.map(async t => {
+    const at = Date.parse(t.entry_at) + cutMs;
+    const px = priceAt(await dayBars(t.root, etDate(at)), t, at);
+    if (px === null) { missing++; return; }
+    const g = grossIfClosedAt(t, at, px);
+    if (g >= 0) return;
+    const d = g - Number(t.gross_pnl);
+    delta += d; cut++;
+    if (Number(t.net_pnl) > 0) { winners++; gaveUp += -d; } else losers++;
+  }));
+  return { cutMin, net: actual + delta, delta, cut, losers, winners, winnersGaveUp: gaveUp, missing };
+}
