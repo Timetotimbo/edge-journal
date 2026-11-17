@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.22.1 — 2026-11-17
+- News: a released event now counts up — "Released Core Retail Sales m/m + Retail Sales m/m · 12m 40s ago" — for 2 hours, instead of saying "now". The next event stays underneath, counting down. Events out at the same minute are shown together.
+
 ## 1.22.0 — 2026-11-17
 - News → Earnings is now a weekly board like Earnings Whispers': a column per weekday (today outlined), each company's logo, biggest first, with This week / Next week. A green or red dot marks a beat or miss on EPS once reported.
 - Tap a logo for the company's full name, exchange, sector, market cap, EPS and revenue (estimate, and actual vs estimate once out), and a link to its whisper number on Earnings Whispers.

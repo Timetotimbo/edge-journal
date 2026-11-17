@@ -32,7 +32,11 @@ export default function NewsCalendar() {
     return relevant(events, currencies).filter(e => impacts.includes(e.impact as Impact)).sort((a, b) => a.date.localeCompare(b.date));
   }, [events, impacts, currencies]);
 
-  const next = filtered.find(e => msUntil(e) > -30 * 60_000);
+  // The latest release in the last 2 hours (counting up) and the next one (counting down), each with anything
+  // released at the same minute (Core Retail Sales and Retail Sales come out together)
+  const atSameTime = (e?: NewsEvent) => (e ? filtered.filter(x => x.date === e.date) : []);
+  const justOut = atSameTime([...filtered].reverse().find(e => msUntil(e) <= 0 && msUntil(e) > -2 * 60 * 60_000));
+  const comingUp = atSameTime(filtered.find(e => msUntil(e) > 0));
   const upcoming = useMemo(() => filtered.filter(e => msUntil(e) > -6 * 60 * 60_000).slice(0, open ? 100 : 6), [filtered, open]);
   const grouped = useMemo(() => {
     const byDay = new Map<string, NewsEvent[]>();
@@ -57,17 +61,24 @@ export default function NewsCalendar() {
         </button>
       </div>
 
-      {view === 'economic' && next && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-edge/30 bg-edge/10 px-3 py-2">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[next.impact as string] || 'bg-mute'}`} />
-          <span className="min-w-0 flex-1 truncate text-sm">
-            <span className="font-medium">{next.title}</span> <span className="text-xs text-mute">({next.country})</span>
-          </span>
-          <span className="shrink-0 num text-sm font-bold text-edge">
-            {msUntil(next) > 0 ? countdown(msUntil(next)) : 'now'}
-          </span>
-        </div>
-      )}
+      {view === 'economic' && [justOut, comingUp].map((group, i) => {
+        if (!group.length) return null;
+        const ms = msUntil(group[0]);
+        const out = ms <= 0;
+        const top = group.find(e => e.impact === 'High') || group[0];
+        return (
+          <div key={i} className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 ${out ? 'border-line bg-line/30' : 'border-edge/30 bg-edge/10'}`}>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[top.impact as string] || 'bg-mute'}`} />
+            <span className="min-w-0 flex-1 truncate text-sm">
+              <span className="text-xs text-mute">{out ? 'Released ' : 'Next '}</span>
+              <span className="font-medium">{group.map(e => e.title).join(' + ')}</span> <span className="text-xs text-mute">({top.country})</span>
+            </span>
+            <span className={`shrink-0 num text-sm font-bold ${out ? 'text-ink' : 'text-edge'}`}>
+              {out ? `${countdown(-ms)} ago` : countdown(ms)}
+            </span>
+          </div>
+        );
+      })}
 
       {view === 'earnings' ? <EarningsBoard cal={cal} error={error} /> : (<>
       <div className="flex flex-wrap gap-1.5 mt-3">
