@@ -54,8 +54,10 @@ export function timeLabel(e: NewsEvent): string {
 }
 
 export function countdown(ms: number): string {
-  const m = Math.round(ms / 60000);
-  if (m < 60) return `${m}m`;
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ${m % 60}m`;
   return `${Math.floor(h / 24)}d ${h % 24}h`;

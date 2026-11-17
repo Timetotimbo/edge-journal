@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.19.2 — 2026-11-17
+- Fixed the News widget's countdown to the next event: it was squeezed into the header row with no room to breathe and could overflow off-screen on a narrow card instead of showing. Now its own banner below the header, ticking live every second (down to seconds once it's close).
+
 ## 1.19.1 — 2026-11-16
 - Mark up chart: a Hairline thickness, thinner than Thin, for every drawing tool including the circle — so a circled detail doesn't get buried under the stroke itself.
 

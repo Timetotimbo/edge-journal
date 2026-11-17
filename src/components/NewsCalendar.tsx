@@ -19,7 +19,7 @@ export default function NewsCalendar() {
     const load = () => fetchCalendar().then(e => { if (!gone) setEvents(e); }).catch(err => { if (!gone) setError(err.message); });
     load();
     const poll = setInterval(load, 5 * 60_000);
-    const clock = setInterval(() => setTick(t => t + 1), 60_000);
+    const clock = setInterval(() => setTick(t => t + 1), 1000);
     return () => { gone = true; clearInterval(poll); clearInterval(clock); };
   }, []);
 
@@ -41,17 +41,24 @@ export default function NewsCalendar() {
   return (
     <section className="card p-4">
       <div className="flex items-center gap-2">
-        <Radio className="w-4 h-4 text-edge" />
+        <Radio className="w-4 h-4 text-edge shrink-0" />
         <h3 className="font-semibold">News</h3>
-        {next && (
-          <span className="text-xs text-mute truncate">
-            Next: <span className="font-medium text-ink">{next.title}</span> ({next.country}) in <span className="num font-semibold text-edge">{countdown(msUntil(next))}</span>
-          </span>
-        )}
-        <button className="ml-auto text-mute hover:text-ink" onClick={() => setOpen(o => !o)} aria-label={open ? 'Show less' : 'Show more'}>
+        <button className="ml-auto text-mute hover:text-ink shrink-0" onClick={() => setOpen(o => !o)} aria-label={open ? 'Show less' : 'Show more'}>
           {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
+
+      {next && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-edge/30 bg-edge/10 px-3 py-2">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[next.impact as string] || 'bg-mute'}`} />
+          <span className="min-w-0 flex-1 truncate text-sm">
+            <span className="font-medium">{next.title}</span> <span className="text-xs text-mute">({next.country})</span>
+          </span>
+          <span className="shrink-0 num text-sm font-bold text-edge">
+            {msUntil(next) > 0 ? countdown(msUntil(next)) : 'now'}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5 mt-3">
         {(['High', 'Medium', 'Low'] as Impact[]).map(i => (
