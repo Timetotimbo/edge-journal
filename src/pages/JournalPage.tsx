@@ -5,6 +5,7 @@ import { dayOf, money, pct, pnlClass, summarize } from '../lib/stats';
 import TradeRow from '../components/TradeRow';
 import { EMOTIONS } from '../components/TradeDetail';
 import DayCharts from '../components/DayCharts';
+import MarketDay from '../components/MarketDay';
 import { Images } from 'lucide-react';
 import { CHARTS_CHANGED, chartDays, uploadCharts } from '../lib/charts';
 
@@ -51,6 +52,7 @@ function DayCard({ day, note, j, onTrade, focused }: { day: string; note?: Day; 
         {trades.length > 0 && <span className={`ml-auto num font-bold ${pnlClass(s.net)}`}>{money(s.net, true)}</span>}
       </div>
       {err && <p className="text-sm text-loss">{err}</p>}
+      <MarketDay day={day} />
       <div className="grid md:grid-cols-2 gap-3">
         <div>
           <label className="label">Plan (before the open)</label>

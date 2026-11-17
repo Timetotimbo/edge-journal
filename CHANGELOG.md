@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.24.0 — 2026-11-17
+- Journal: every day now opens with "Market this day": the high- and medium-impact US economic releases with their times and forecast / previous, and that day's biggest earnings split into Before open, After close and Time not set. Reported earnings are green (beat) or red (missed); tap one for its Earnings Whispers page. Economic releases are only available for the current week; earnings go back as far as you scroll.
+- Earnings board: "Biggest reporting this week: NVIDIA #NVDA, Walmart #WMT, …" across the top, like Earnings Whispers' weekly post. Ranked by company size (their "most anticipated" ranking is their own data). Tap a name to open its details.
+
 ## 1.23.1 — 2026-11-17
 - Earnings board: an Earnings Whispers button next to This week / Next week opens their full calendar.
 

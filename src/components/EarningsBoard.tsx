@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Moon, Sun } from 'lucide-react';
-import { bigMoney, fetchProfile, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
+import { bigMoney, fetchProfile, shortName, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const SLOTS = [
@@ -76,6 +76,21 @@ export default function EarningsBoard({ cal, error }: { cal: Calendar | null; er
         <a href="https://www.earningswhispers.com/calendar" target="_blank" rel="noopener noreferrer"
           className="ml-auto inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-edge">Earnings Whispers<ExternalLink className="w-3 h-3" /></a>
       </div>
+
+      {week === 0 && cal.headline.length > 0 && (
+        <p className="text-sm leading-relaxed">
+          <span className="text-mute">Biggest reporting this week: </span>
+          {cal.headline.map((h, i) => {
+            const e = cal.earnings.find(x => x.symbol === h.symbol);
+            return (
+              <span key={h.symbol}>
+                {i > 0 && (i === cal.headline.length - 1 ? ', and ' : ', ')}
+                <button onClick={() => e && setPicked(e)} className="font-medium">{shortName(h.name)} <span className="text-edge font-semibold">#{h.symbol}</span></button>
+              </span>
+            );
+          })}.
+        </p>
+      )}
 
       {!slots.length ? <p className="text-sm text-mute">No earnings listed for {week ? 'next' : 'this'} week.</p> : (
         <div className="rounded-lg bg-[#f3e2c4] p-1 space-y-1">
