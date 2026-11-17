@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.26.0 — 2026-11-17
+- Dashboard opens with today's daily report (Market this day, Plan, Review, mood, charts and today's trades — the same card as in the Journal, marked "Today"), then the News calendar, then the filters, then the stats.
+
 ## 1.25.0 — 2026-11-17
 - Big news flashes: high-impact economic releases (FOMC, CPI, NFP…) and the week's biggest earnings (NVDA, WMT, HD…) pulse with a red glow until they're out — in the News card, its "Next" banner, the earnings board and each Journal day. A report stops flashing once its time has passed (9:30 New York for before-open, 4:30 for after-close). Phones set to reduce motion get a steady red ring instead.
 

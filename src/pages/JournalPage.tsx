@@ -36,7 +36,7 @@ function BulkCharts({ onDone }: { onDone: (days: string[]) => void }) {
   );
 }
 
-function DayCard({ day, note, j, onTrade, focused }: { day: string; note?: Day; j: Journal; onTrade: (id: string) => void; focused: boolean }) {
+export function DayCard({ day, note, j, onTrade, focused, label }: { day: string; note?: Day; j: Journal; onTrade: (id: string) => void; focused: boolean; label?: string }) {
   const trades = useMemo(() => (j.trades || []).filter(t => dayOf(t.entry_at) === day).sort((a, b) => a.entry_at.localeCompare(b.entry_at)), [j.trades, day]);
   const s = summarize(trades);
   const [plan, setPlan] = useState(note?.plan || '');
@@ -47,7 +47,7 @@ function DayCard({ day, note, j, onTrade, focused }: { day: string; note?: Day; 
   return (
     <section id={`day-${day}`} className={`card p-4 space-y-3 scroll-mt-20 ${focused ? 'ring-2 ring-edge' : ''}`}>
       <div className="flex items-baseline gap-3">
-        <h3 className="font-bold">{date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</h3>
+        <h3 className="font-bold">{label && <span className="text-edge">{label} · </span>}{date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</h3>
         {trades.length > 0 && <span className="text-xs text-mute">{trades.length} trade{trades.length === 1 ? '' : 's'} · {pct(s.winRate)} win</span>}
         {trades.length > 0 && <span className={`ml-auto num font-bold ${pnlClass(s.net)}`}>{money(s.net, true)}</span>}
       </div>

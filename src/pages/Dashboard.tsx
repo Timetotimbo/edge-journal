@@ -6,7 +6,6 @@ import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type
 import { cutLosers, type CutResult } from '../lib/whatif';
 import { review } from '../lib/review';
 import Calendar from '../components/Calendar';
-import NewsCalendar from '../components/NewsCalendar';
 import TradeRow from '../components/TradeRow';
 import Subscriptions from '../components/Subscriptions';
 import AccountRange from '../components/AccountRange';
@@ -156,7 +155,6 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
   if (!all.length) {
     return (
       <div className="space-y-4">
-        <NewsCalendar />
         <div className="card p-8 text-center space-y-3">
           <h2 className="text-xl font-bold">Your journal is empty</h2>
           <p className="text-mute text-sm">Import your trades from NinjaTrader 8, Tradovate, Robinhood or thinkorswim/Schwab, or add one by hand.</p>
@@ -168,7 +166,6 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
 
   return (
     <div className="space-y-4">
-      <NewsCalendar />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat all={x(v => money(v.net, true))} label="Net P&L" value={money(s.net, true)} cls={pnlClass(s.net)} sub={`${s.count} trades · fees ${money(s.fees)}`} />
         <Stat all={x(v => pct(v.winRate))} label="Win rate" value={pct(s.winRate)} sub={`${s.wins} W · ${s.losses} L · days ${s.winDays}/${s.winDays + s.lossDays}`} />

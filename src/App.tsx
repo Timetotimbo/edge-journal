@@ -11,7 +11,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Trades from './pages/Trades';
 import Progress from './pages/Progress';
-import JournalPage from './pages/JournalPage';
+import JournalPage, { DayCard } from './pages/JournalPage';
+import NewsCalendar from './components/NewsCalendar';
+import { dayOf } from './lib/stats';
 import Import from './pages/Import';
 import StudyPage from './pages/StudyPage';
 import TradeDetail from './components/TradeDetail';
@@ -106,6 +108,11 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-4 space-y-4">
         {j.error && <p className="card p-3 text-sm text-loss">{j.error}</p>}
+        {tab === 'dashboard' && (() => {
+          const today = dayOf(new Date().toISOString());
+          // Only once the journal has loaded: the plan and review boxes start from what's saved
+          return <>{j.trades !== null && <DayCard key={today} day={today} note={j.days[today]} j={j} onTrade={setOpenId} focused={false} label="Today" />}<NewsCalendar /></>;
+        })()}
         {(tab === 'dashboard' || tab === 'trades' || tab === 'progress') && (
           <div className="flex flex-wrap gap-2">
             <select className="field !w-auto !h-9" value={filters.range} onChange={e => setFilters({ ...filters, range: e.target.value })}>
