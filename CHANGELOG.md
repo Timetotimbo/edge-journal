@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.21.0 — 2026-11-17
+- News → Earnings tab: upcoming earnings for the next week with EPS and revenue estimates, and the actuals once reported (green beat, red miss). Each has a Whisper link to its Earnings Whispers page. From FMP's free plan, so big names only and no before-open / after-close times.
+
 ## 1.20.2 — 2026-11-17
 - News works now: the calendar is fetched through Social Bloom's server (tj-news) instead of Cloudflare, which the news feed turns away.
 

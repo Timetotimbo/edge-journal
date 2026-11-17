@@ -10,20 +10,42 @@ export type NewsEvent = {
   actual?: string;
 };
 
-let cache: { at: number; events: NewsEvent[] } | null = null;
+/** One company's report, from FMP. date is a plain day (no before-open/after-close on FMP's free plan). */
+export type Earning = {
+  symbol: string;
+  date: string;
+  epsEstimated: number | null;
+  epsActual: number | null;
+  revenueEstimated: number | null;
+  revenueActual: number | null;
+};
 
-// Fetched by Social Bloom's tj-news function: the feed has no CORS header and turns away Cloudflare, where this is hosted
+export type Calendar = { events: NewsEvent[]; earnings: Earning[]; earningsError?: string };
+
+let cache: { at: number; cal: Calendar } | null = null;
+
+// Fetched by Social Bloom's tj-news function: the feed has no CORS header and turns away Cloudflare, where this is
+// hosted, and the earnings key has to stay on the server
 const NEWS = 'https://yrrlzqdabodopzaqjlwf.supabase.co/functions/v1/tj-news';
 
-/** The week's economic calendar. Cached for 5 minutes per tab. */
-export async function fetchCalendar(): Promise<NewsEvent[]> {
-  if (cache && Date.now() - cache.at < 5 * 60_000) return cache.events;
+/** The week's economic calendar and upcoming earnings. Cached for 5 minutes per tab. */
+export async function fetchCalendar(): Promise<Calendar> {
+  if (cache && Date.now() - cache.at < 5 * 60_000) return cache.cal;
   const body = await fetch(NEWS).then(r => r.json()).catch(() => null);
   if (!Array.isArray(body?.events)) throw new Error(`Couldn't load the news calendar${body?.error ? `: ${body.error}` : ''}`);
-  const events: NewsEvent[] = body.events;
-  cache = { at: Date.now(), events };
-  return events;
+  const cal: Calendar = { events: body.events, earnings: Array.isArray(body.earnings) ? body.earnings : [], earningsError: body.earningsError };
+  cache = { at: Date.now(), cal };
+  return cal;
 }
+
+/** $40.2B, $812M: revenue at a glance */
+export function bigMoney(n: number | null): string {
+  if (n == null) return '–';
+  const a = Math.abs(n);
+  return a >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : a >= 1e6 ? `$${Math.round(n / 1e6)}M` : `$${Math.round(n).toLocaleString()}`;
+}
+
+export const whisperUrl = (symbol: string) => `https://www.earningswhispers.com/epsdetails/${encodeURIComponent(symbol)}`;
 
 export const IMPACT_ORDER: Impact[] = ['High', 'Medium', 'Low'];
 

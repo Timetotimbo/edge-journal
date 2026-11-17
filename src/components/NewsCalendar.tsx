@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Radio } from 'lucide-react';
-import { countdown, dayKey, dayLabel, fetchCalendar, msUntil, relevant, timeLabel, type Impact, type NewsEvent } from '../lib/calendar';
+import { ChevronDown, ChevronUp, ExternalLink, Radio } from 'lucide-react';
+import { bigMoney, countdown, dayKey, dayLabel, fetchCalendar, msUntil, relevant, timeLabel, whisperUrl, type Calendar, type Earning, type Impact, type NewsEvent } from '../lib/calendar';
 
 const DOT: Record<string, string> = { High: 'bg-loss', Medium: 'bg-edge', Low: 'bg-mute' };
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'CNY'];
 
-/** An economic calendar, like ForexFactory's: the week's scheduled news, soonest first, filtered by impact and currency. */
+/** An economic calendar, like ForexFactory's: the week's scheduled news, soonest first, filtered by impact and currency.
+ *  A second tab lists upcoming earnings, each with a link to its Earnings Whispers page. */
 export default function NewsCalendar() {
-  const [events, setEvents] = useState<NewsEvent[] | null>(null);
+  const [cal, setCal] = useState<Calendar | null>(null);
+  const events = cal?.events || null;
+  const [view, setView] = useState<'economic' | 'earnings'>('economic');
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [impacts, setImpacts] = useState<Impact[]>(['High', 'Medium']);
@@ -16,7 +19,7 @@ export default function NewsCalendar() {
 
   useEffect(() => {
     let gone = false;
-    const load = () => fetchCalendar().then(e => { if (!gone) setEvents(e); }).catch(err => { if (!gone) setError(err.message); });
+    const load = () => fetchCalendar().then(c => { if (!gone) { setCal(c); setError(''); } }).catch(err => { if (!gone) setError(err.message); });
     load();
     const poll = setInterval(load, 5 * 60_000);
     const clock = setInterval(() => setTick(t => t + 1), 1000);
@@ -36,6 +39,16 @@ export default function NewsCalendar() {
     return [...byDay.entries()];
   }, [upcoming]);
 
+  // Earnings from yesterday on, by day, biggest names first within a day isn't known on the free plan, so A–Z
+  const earningDays = useMemo(() => {
+    const byDay = new Map<string, Earning[]>();
+    for (const e of [...(cal?.earnings || [])].sort((a, b) => a.date.localeCompare(b.date) || a.symbol.localeCompare(b.symbol))) {
+      (byDay.get(e.date) || byDay.set(e.date, []).get(e.date)!).push(e);
+    }
+    return [...byDay.entries()];
+  }, [cal]);
+  const vs = (actual: number | null, est: number | null) => (actual == null || est == null ? 'text-ink' : actual > est ? 'text-win' : actual < est ? 'text-loss' : 'text-ink');
+
   const toggle = <T,>(list: T[], v: T, set: (l: T[]) => void) => set(list.includes(v) ? list.filter(x => x !== v) : [...list, v]);
 
   return (
@@ -43,12 +56,17 @@ export default function NewsCalendar() {
       <div className="flex items-center gap-2">
         <Radio className="w-4 h-4 text-edge shrink-0" />
         <h3 className="font-semibold">News</h3>
+        <div className="flex rounded-lg border border-line p-0.5 text-xs">
+          {(['economic', 'earnings'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} className={`px-2 py-0.5 rounded-md ${view === v ? 'bg-line font-semibold text-ink' : 'text-mute'}`}>{v === 'economic' ? 'Economic' : 'Earnings'}</button>
+          ))}
+        </div>
         <button className="ml-auto text-mute hover:text-ink shrink-0" onClick={() => setOpen(o => !o)} aria-label={open ? 'Show less' : 'Show more'}>
           {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
 
-      {next && (
+      {view === 'economic' && next && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-edge/30 bg-edge/10 px-3 py-2">
           <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[next.impact as string] || 'bg-mute'}`} />
           <span className="min-w-0 flex-1 truncate text-sm">
@@ -60,6 +78,36 @@ export default function NewsCalendar() {
         </div>
       )}
 
+      {view === 'earnings' ? (
+        <div className="mt-3">
+          {error ? <p className="text-sm text-loss">{error}</p>
+            : !cal ? <p className="text-sm text-mute">Loading…</p>
+            : cal.earningsError ? <p className="text-sm text-mute">Earnings couldn't load ({cal.earningsError}).</p>
+            : !earningDays.length ? <p className="text-sm text-mute">No earnings listed for the next week.</p>
+            : (
+              <div className="divide-y divide-line">
+                {earningDays.map(([day, list]) => (
+                  <div key={day} className="py-2 first:pt-0">
+                    <div className="text-xs font-medium text-mute mb-1">{dayLabel(day)}</div>
+                    <ul className="space-y-1.5">
+                      {list.map(e => (
+                        <li key={e.symbol} className="flex items-baseline gap-2 text-sm">
+                          <span className="w-14 shrink-0 font-semibold">{e.symbol}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-mute num">
+                            EPS {e.epsActual != null ? <span className={`font-semibold ${vs(e.epsActual, e.epsEstimated)}`}>{e.epsActual}</span> : null}{e.epsActual != null ? ' vs ' : ''}{e.epsEstimated ?? '–'} est
+                            {' · '}Rev {e.revenueActual != null ? <span className={`font-semibold ${vs(e.revenueActual, e.revenueEstimated)}`}>{bigMoney(e.revenueActual)}</span> : null}{e.revenueActual != null ? ' vs ' : ''}{bigMoney(e.revenueEstimated)} est
+                          </span>
+                          <a href={whisperUrl(e.symbol)} target="_blank" rel="noopener noreferrer" className="shrink-0 flex items-center gap-0.5 text-xs text-edge">Whisper<ExternalLink className="w-3 h-3" /></a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          <p className="text-[11px] text-mute mt-2">Big names only, and no before-open / after-close times, on the free data plan. Whisper opens Earnings Whispers.</p>
+        </div>
+      ) : (<>
       <div className="flex flex-wrap gap-1.5 mt-3">
         {(['High', 'Medium', 'Low'] as Impact[]).map(i => (
           <button key={i} onClick={() => toggle(impacts, i, setImpacts)}
@@ -109,6 +157,7 @@ export default function NewsCalendar() {
       {!open && filtered.length > upcoming.length && (
         <button className="text-xs text-edge mt-2" onClick={() => setOpen(true)}>Show the full week →</button>
       )}
+      </>)}
     </section>
   );
 }
