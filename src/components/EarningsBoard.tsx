@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Moon, Sun } from 'lucide-react';
-import { bigMoney, fetchProfile, shortName, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
+import { bigMoney, fetchProfile, isBigEarning, shortName, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const SLOTS = [
@@ -53,7 +53,7 @@ export default function EarningsBoard({ cal, error }: { cal: Calendar | null; er
     const beat = e.epsActual != null && e.epsEstimated != null ? (e.epsActual >= e.epsEstimated ? 'bg-win' : 'bg-loss') : '';
     return (
       <button key={e.symbol} onClick={() => setPicked(on ? null : e)} title={e.symbol}
-        className={`relative w-full rounded-md bg-white p-1 flex flex-col items-center gap-0.5 border-2 ${on ? 'border-edge' : 'border-transparent'}`}>
+        className={`relative w-full rounded-md bg-white p-1 flex flex-col items-center gap-0.5 border-2 ${on ? 'border-edge' : 'border-transparent'} ${isBigEarning(e, cal?.headline) ? 'big-pulse' : ''}`}>
         <span className="h-6 w-full grid place-items-center"><Logo src={e.image} symbol={e.symbol} className="max-h-6 max-w-full" /></span>
         <span className="text-[9px] font-semibold text-neutral-500 leading-none">{e.symbol}</span>
         {beat && <span className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${beat}`} />}

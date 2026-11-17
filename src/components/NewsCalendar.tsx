@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Radio } from 'lucide-react';
 import EarningsBoard from './EarningsBoard';
-import { countdown, dayKey, dayLabel, fetchCalendar, msUntil, relevant, timeLabel, type Calendar, type Impact, type NewsEvent } from '../lib/calendar';
+import { countdown, dayKey, dayLabel, fetchCalendar, isBigEvent, msUntil, relevant, timeLabel, type Calendar, type Impact, type NewsEvent } from '../lib/calendar';
 
 const DOT: Record<string, string> = { High: 'bg-loss', Medium: 'bg-edge', Low: 'bg-mute' };
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'CNY'];
@@ -67,7 +67,7 @@ export default function NewsCalendar() {
         const out = ms <= 0;
         const top = group.find(e => e.impact === 'High') || group[0];
         return (
-          <div key={i} className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 ${out ? 'border-line bg-line/30' : 'border-edge/30 bg-edge/10'}`}>
+          <div key={i} className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 ${out ? 'border-line bg-line/30' : 'border-edge/30 bg-edge/10'} ${!out && group.some(isBigEvent) ? 'big-pulse' : ''}`}>
             <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[top.impact as string] || 'bg-mute'}`} />
             <span className="min-w-0 flex-1 truncate text-sm">
               <span className="text-xs text-mute">{out ? 'Released ' : 'Next '}</span>
@@ -109,11 +109,11 @@ export default function NewsCalendar() {
                   {items.map((e, i) => {
                     const past = msUntil(e) < 0;
                     return (
-                      <li key={`${key}-${i}`} className={`flex items-baseline gap-2 text-sm ${past ? 'opacity-50' : ''}`}>
+                      <li key={`${key}-${i}`} className={`flex items-baseline gap-2 text-sm rounded-md border border-transparent ${past ? 'opacity-50' : ''} ${isBigEvent(e) ? 'big-pulse -mx-1 px-1 py-0.5' : ''}`}>
                         <span className="w-14 shrink-0 num text-xs text-mute">{timeLabel(e)}</span>
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[e.impact as string] || 'bg-mute'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[e.impact as string] || 'bg-mute'} ${isBigEvent(e) ? 'big-dot' : ''}`} />
                         <span className="w-9 shrink-0 text-xs font-semibold text-mute">{e.country}</span>
-                        <span className="truncate">{e.title}</span>
+                        <span className={`truncate ${isBigEvent(e) ? 'font-semibold' : ''}`}>{e.title}</span>
                         {(e.forecast || e.previous) && (
                           <span className="ml-auto shrink-0 text-xs text-mute num">
                             {e.forecast && <>f {e.forecast}</>}{e.forecast && e.previous && ' · '}{e.previous && <>p {e.previous}</>}

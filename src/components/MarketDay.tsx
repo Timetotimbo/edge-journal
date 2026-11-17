@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { dayKey, fetchCalendar, fetchDayEarnings, timeLabel, whisperUrl, type Earning, type NewsEvent } from '../lib/calendar';
+import { dayKey, fetchCalendar, fetchDayEarnings, isBigEarning, isBigEvent, timeLabel, whisperUrl, type Earning, type NewsEvent } from '../lib/calendar';
 
 const DOT: Record<string, string> = { High: 'bg-loss', Medium: 'bg-edge' };
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -12,6 +12,10 @@ export default function MarketDay({ day }: { day: string }) {
   const [events, setEvents] = useState<NewsEvent[] | null>(null);
   const [earnings, setEarnings] = useState<Earning[] | null>(null);
   const [thisWeek, setThisWeek] = useState(false);
+  const [headline, setHeadline] = useState<{ symbol: string }[]>([]);
+  // Re-check each minute so a release stops flashing once it's out
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   useEffect(() => {
     let gone = false;
@@ -23,6 +27,7 @@ export default function MarketDay({ day }: { day: string }) {
     setThisWeek(inWeek);
     void fetchCalendar().then(cal => {
       if (gone) return;
+      setHeadline(cal.headline);
       setEvents(inWeek ? cal.events.filter(e => dayKey(e) === day && e.country === 'USD' && (e.impact === 'High' || e.impact === 'Medium')) : []);
       if (day >= from && day <= lastBoardDay) setEarnings(cal.earnings.filter(e => e.date === day));
     }).catch(() => { if (!gone) setEvents([]); });
@@ -38,7 +43,7 @@ export default function MarketDay({ day }: { day: string }) {
     const res = e.epsActual != null && e.epsEstimated != null ? (e.epsActual >= e.epsEstimated ? 'text-win border-win/40' : 'text-loss border-loss/40') : 'border-line';
     return (
       <a key={e.symbol} href={whisperUrl(e.symbol)} target="_blank" rel="noopener noreferrer" title={e.epsActual != null ? `EPS ${e.epsActual} vs ${e.epsEstimated ?? '–'} est` : `EPS ${e.epsEstimated ?? '–'} est`}
-        className={`text-xs font-semibold rounded-md border px-1.5 py-0.5 ${res}`}>{e.symbol}</a>
+        className={`text-xs font-semibold rounded-md border px-1.5 py-0.5 ${res} ${isBigEarning(e, headline) ? 'big-pulse' : ''}`}>{e.symbol}</a>
     );
   };
   const row = (Icon: typeof Sun | null, label: string, list: Earning[]) => list.length > 0 && (
@@ -54,10 +59,10 @@ export default function MarketDay({ day }: { day: string }) {
       {events.length > 0 && (
         <ul className="space-y-1">
           {events.map((e, i) => (
-            <li key={i} className="flex items-baseline gap-2 text-sm">
+            <li key={i} className={`flex items-baseline gap-2 text-sm rounded-md border border-transparent ${isBigEvent(e) ? 'big-pulse -mx-1 px-1 py-0.5' : ''}`}>
               <span className="w-14 shrink-0 num text-xs text-mute">{timeLabel(e)}</span>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[e.impact as string]}`} />
-              <span className="min-w-0 flex-1 truncate">{e.title}</span>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[e.impact as string]} ${isBigEvent(e) ? 'big-dot' : ''}`} />
+              <span className={`min-w-0 flex-1 truncate ${isBigEvent(e) ? 'font-semibold' : ''}`}>{e.title}</span>
               {(e.forecast || e.previous) && <span className="shrink-0 text-xs text-mute num">{e.forecast && `f ${e.forecast}`}{e.forecast && e.previous && ' · '}{e.previous && `p ${e.previous}`}</span>}
             </li>
           ))}

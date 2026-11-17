@@ -95,3 +95,15 @@ body { font-family: Inter, system-ui, sans-serif; -webkit-tap-highlight-color: t
 .label { @apply block text-xs font-medium text-mute mb-1; }
 .chip { @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition; }
 .num { font-variant-numeric: tabular-nums; }
+/* Big news and earnings still to come: a flashing red glow so they can't be missed */
+@keyframes big-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--loss) / 0); background-color: rgb(var(--loss) / 0.08); }
+  50% { box-shadow: 0 0 0 4px rgb(var(--loss) / 0.55); background-color: rgb(var(--loss) / 0.28); }
+}
+@keyframes big-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.9); opacity: 0.55; } }
+.big-pulse { animation: big-pulse 1.4s ease-in-out infinite; border-color: rgb(var(--loss)) !important; }
+.big-dot { animation: big-dot 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .big-pulse { animation: none; box-shadow: 0 0 0 3px rgb(var(--loss) / 0.55); }
+  .big-dot { animation: none; }
+}

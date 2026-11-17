@@ -25,6 +25,35 @@ export type Earning = {
 /** more: how many smaller companies weren't listed, by "date|hour". headline: this week's biggest reporters, named. */
 export type Calendar = { events: NewsEvent[]; earnings: Earning[]; more: Record<string, number>; headline: { symbol: string; name: string }[]; earningsError?: string };
 
+/** New York date and minutes since midnight, now */
+function nyNow(): { day: string; mins: number } {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date()).map(x => [x.type, x.value]));
+  return { day: `${p.year}-${p.month}-${p.day}`, mins: +p.hour * 60 + +p.minute };
+}
+/** Has the report come out? Before-open reports are out by 9:30 New York time, after-close ones by 4:30. */
+function reported(e: Earning): boolean {
+  if (e.epsActual != null) return true;
+  const ny = nyNow();
+  if (e.date !== ny.day) return e.date < ny.day;
+  return e.hour === 'bmo' ? ny.mins >= 9 * 60 + 30 : e.hour === 'amc' ? ny.mins >= 16 * 60 + 30 : false;
+}
+/** A report worth flashing until it's out: one of this week's biggest reporters, or (other weeks, when there's no
+ *  list) $20B+ expected revenue. Revenue alone isn't used this week: some companies estimate in yuan, which inflates it. */
+export function isBigEarning(e: Earning, headline: { symbol: string }[] = []): boolean {
+  if (reported(e)) return false;
+  const d = new Date(`${nyNow().day}T12:00:00`);
+  const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  const thisWeek = e.date >= iso(mon) && e.date <= iso(sun);
+  return thisWeek && headline.length ? headline.some(h => h.symbol === e.symbol) : (e.revenueEstimated || 0) >= 20e9;
+}
+/** A high-impact release that hasn't come out yet */
+export function isBigEvent(e: NewsEvent): boolean {
+  return e.impact === 'High' && new Date(e.date).getTime() > Date.now();
+}
+
 /** "The TJX Companies, Inc." → "TJX", "Alibaba Group Holding Limited" → "Alibaba" */
 export function shortName(name: string): string {
   let s = name.replace(/^The\s+/i, '').trim(), was = '';
