@@ -12,15 +12,15 @@ export type NewsEvent = {
 
 let cache: { at: number; events: NewsEvent[] } | null = null;
 
-/** The week's economic calendar, proxied through /api/calendar so the browser never hits the feed directly. Cached for 5 minutes per tab. */
+// Fetched by Social Bloom's tj-news function: the feed has no CORS header and turns away Cloudflare, where this is hosted
+const NEWS = 'https://yrrlzqdabodopzaqjlwf.supabase.co/functions/v1/tj-news';
+
+/** The week's economic calendar. Cached for 5 minutes per tab. */
 export async function fetchCalendar(): Promise<NewsEvent[]> {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.events;
-  const res = await fetch('/api/calendar');
-  if (!res.ok) {
-    const why = await res.json().then(b => b?.error).catch(() => '');
-    throw new Error(`Couldn't load the news calendar${why ? `: ${why}` : ''}`);
-  }
-  const events: NewsEvent[] = await res.json();
+  const body = await fetch(NEWS).then(r => r.json()).catch(() => null);
+  if (!Array.isArray(body?.events)) throw new Error(`Couldn't load the news calendar${body?.error ? `: ${body.error}` : ''}`);
+  const events: NewsEvent[] = body.events;
   cache = { at: Date.now(), events };
   return events;
 }

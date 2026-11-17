@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.20.2 — 2026-11-17
+- News works now: the calendar is fetched through Social Bloom's server (tj-news) instead of Cloudflare, which the news feed turns away.
+
 ## 1.20.1 — 2026-11-17
 - News: when the calendar feed can't be reached, the widget now says so (with the reason) instead of showing an empty week, and a failed fetch is no longer cached for five minutes.
 
