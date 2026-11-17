@@ -13,7 +13,7 @@ type View = { scale: number; x: number; y: number };
 
 const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['oval', 'Circle', Circle], ['box', 'Box', Square], ['text', 'Text', Type]];
 const COLORS = ['#ff8a1f', '#22c55e', '#ef4444', '#facc15', '#38bdf8', '#ffffff', '#000000'];
-const SIZES: [number, string][] = [[2, 'Thin'], [4, 'Medium'], [7, 'Thick']];
+const SIZES: [number, string][] = [[1, 'Hairline'], [2, 'Thin'], [4, 'Medium'], [7, 'Thick']];
 const MAX = 2400; // longest side of the saved picture
 const MAX_ZOOM = 6;
 

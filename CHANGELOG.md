@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.19.1 — 2026-11-16
+- Mark up chart: a Hairline thickness, thinner than Thin, for every drawing tool including the circle — so a circled detail doesn't get buried under the stroke itself.
+
 ## 1.19.0 — 2026-11-16
 - News on the dashboard: this week's economic calendar (ForexFactory-style — NFP, CPI, FOMC and the rest), soonest event first with a live countdown. Filter by impact and currency; defaults to High/Medium USD. Fetched server-side through a new Pages Function so the browser never hits the feed directly.
 
