@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.19.0 — 2026-11-16
+- News on the dashboard: this week's economic calendar (ForexFactory-style — NFP, CPI, FOMC and the rest), soonest event first with a live countdown. Filter by impact and currency; defaults to High/Medium USD. Fetched server-side through a new Pages Function so the browser never hits the feed directly.
+
 ## 1.18.0 — 2026-11-13
 - Mark up chart: pinch with two fingers to zoom in and drag to pan, for drawing precisely on small details. A reset-zoom button and a "% zoomed" readout appear while zoomed in.
 - Lines, arrows and boxes (not freehand strokes) can now be grabbed and dragged to reposition, the same way text and the price line already could.
