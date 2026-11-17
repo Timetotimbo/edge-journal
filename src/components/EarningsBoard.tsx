@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Moon, Sun } from 'lucide-react';
-import { bigMoney, fetchProfile, isBigEarning, shortName, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
+import { bigMoney, closeTime, fetchProfile, openTime, isBigEarning, shortName, whisperUrl, type Calendar, type Earning, type Profile } from '../lib/calendar';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const SLOTS = [
@@ -105,6 +105,7 @@ export default function EarningsBoard({ cal, error }: { cal: Calendar | null; er
             <div key={hour || 'tba'}>
               <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600">
                 {Icon && <Icon className="w-3 h-3" />}{label}
+                {hour && <span className="normal-case font-normal tracking-normal">({hour === 'bmo' ? openTime(days[0]) : closeTime(days[0])})</span>}
               </div>
               <div className="grid grid-cols-5 gap-1">
                 {days.map(d => {

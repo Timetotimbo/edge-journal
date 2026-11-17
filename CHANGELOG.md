@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.26.1 — 2026-11-17
+- Earnings labels show the open and close in your own time: "Before open (8:30 AM)", "After close (3:00 PM)" in Central. Worked out from New York's 9:30 and 4:00, so daylight saving and travel take care of themselves.
+
 ## 1.26.0 — 2026-11-17
 - Dashboard opens with today's daily report (Market this day, Plan, Review, mood, charts and today's trades — the same card as in the Journal, marked "Today"), then the News calendar, then the filters, then the stats.
 

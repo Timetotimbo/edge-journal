@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { dayKey, fetchCalendar, fetchDayEarnings, isBigEarning, isBigEvent, timeLabel, whisperUrl, type Earning, type NewsEvent } from '../lib/calendar';
+import { closeTime, dayKey, fetchCalendar, openTime, fetchDayEarnings, isBigEarning, isBigEvent, timeLabel, whisperUrl, type Earning, type NewsEvent } from '../lib/calendar';
 
 const DOT: Record<string, string> = { High: 'bg-loss', Medium: 'bg-edge' };
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -46,9 +46,12 @@ export default function MarketDay({ day }: { day: string }) {
         className={`text-xs font-semibold rounded-md border px-1.5 py-0.5 ${res} ${isBigEarning(e, headline) ? 'big-pulse' : ''}`}>{e.symbol}</a>
     );
   };
-  const row = (Icon: typeof Sun | null, label: string, list: Earning[]) => list.length > 0 && (
+  const row = (Icon: typeof Sun | null, label: string, list: Earning[], at?: string) => list.length > 0 && (
     <div className="flex items-start gap-2">
-      <span className="w-24 shrink-0 flex items-center gap-1 text-xs text-mute pt-0.5">{Icon && <Icon className="w-3 h-3" />}{label}</span>
+      <span className="w-24 shrink-0 text-xs text-mute pt-0.5 leading-tight">
+        <span className="flex items-center gap-1">{Icon && <Icon className="w-3 h-3" />}{label}</span>
+        {at && <span className="block pl-4 text-[11px]">({at})</span>}
+      </span>
       <div className="flex flex-wrap gap-1">{list.map(chip)}</div>
     </div>
   );
@@ -71,8 +74,8 @@ export default function MarketDay({ day }: { day: string }) {
       {!thisWeek && <p className="text-[11px] text-mute">Economic releases are only kept for the current week; earnings below.</p>}
       {earnings.length > 0 && (
         <div className="space-y-1.5">
-          {row(Sun, 'Before open', before)}
-          {row(Moon, 'After close', after)}
+          {row(Sun, 'Before open', before, openTime(day))}
+          {row(Moon, 'After close', after, closeTime(day))}
           {row(null, 'Time not set', unset)}
         </div>
       )}

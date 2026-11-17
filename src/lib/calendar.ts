@@ -38,6 +38,19 @@ function reported(e: Earning): boolean {
   if (e.date !== ny.day) return e.date < ny.day;
   return e.hour === 'bmo' ? ny.mins >= 9 * 60 + 30 : e.hour === 'amc' ? ny.mins >= 16 * 60 + 30 : false;
 }
+/** A New York clock time on a day (yyyy-mm-dd), as this phone's local time: the open (9:30) and close (4:00) */
+export function nyClock(day: string, h: number, m: number): string {
+  const [y, mo, d] = day.split('-').map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, m);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(guess)).map(x => [x.type, x.value]));
+  const nyAtGuess = +p.hour * 60 + +p.minute, want = h * 60 + m;
+  let diff = want - nyAtGuess; if (diff > 720) diff -= 1440; if (diff < -720) diff += 1440;
+  return new Date(guess + diff * 60_000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+export const openTime = (day: string) => nyClock(day, 9, 30);
+export const closeTime = (day: string) => nyClock(day, 16, 0);
+
 /** A report worth flashing until it's out: one of this week's biggest reporters, or (other weeks, when there's no
  *  list) $20B+ expected revenue. Revenue alone isn't used this week: some companies estimate in yuan, which inflates it. */
 export function isBigEarning(e: Earning, headline: { symbol: string }[] = []): boolean {
