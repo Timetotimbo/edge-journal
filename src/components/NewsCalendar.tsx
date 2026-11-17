@@ -39,7 +39,7 @@ export default function NewsCalendar() {
     return [...byDay.entries()];
   }, [upcoming]);
 
-  // Earnings from yesterday on, by day, biggest names first within a day isn't known on the free plan, so A–Z
+  // Earnings by day, A–Z within a day (the free plan gives no report time to sort by)
   const earningDays = useMemo(() => {
     const byDay = new Map<string, Earning[]>();
     for (const e of [...(cal?.earnings || [])].sort((a, b) => a.date.localeCompare(b.date) || a.symbol.localeCompare(b.symbol))) {
