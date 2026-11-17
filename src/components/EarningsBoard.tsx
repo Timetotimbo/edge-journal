@@ -67,10 +67,14 @@ export default function EarningsBoard({ cal, error }: { cal: Calendar | null; er
 
   return (
     <div className="mt-3 space-y-3">
-      <div className="flex rounded-lg border border-line p-0.5 text-xs w-max">
-        {(['This week', 'Next week'] as const).map((l, i) => (
-          <button key={l} onClick={() => { setWeek(i as 0 | 1); setPicked(null); }} className={`px-2 py-0.5 rounded-md ${week === i ? 'bg-line font-semibold text-ink' : 'text-mute'}`}>{l}</button>
-        ))}
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-lg border border-line p-0.5 text-xs w-max">
+          {(['This week', 'Next week'] as const).map((l, i) => (
+            <button key={l} onClick={() => { setWeek(i as 0 | 1); setPicked(null); }} className={`px-2 py-0.5 rounded-md ${week === i ? 'bg-line font-semibold text-ink' : 'text-mute'}`}>{l}</button>
+          ))}
+        </div>
+        <a href="https://www.earningswhispers.com/calendar" target="_blank" rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-edge">Earnings Whispers<ExternalLink className="w-3 h-3" /></a>
       </div>
 
       {!slots.length ? <p className="text-sm text-mute">No earnings listed for {week ? 'next' : 'this'} week.</p> : (

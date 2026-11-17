@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.23.1 — 2026-11-17
+- Earnings board: an Earnings Whispers button next to This week / Next week opens their full calendar.
+
 ## 1.23.0 — 2026-11-17
 - Earnings board: report times. Each day is split into Before open and After close rows like Earnings Whispers, with a Time not set row for the rest. Now from Finnhub, which lists every reporting company (400+ a week): the board shows the biggest in each slot by expected revenue, with "+N more".
 - Tapping a logo looks up the company's full name, exchange, industry and market cap, says when it reports (e.g. "Tuesday, Nov 17, after the close"), links its whisper number and its website, and scrolls the details into view.
