@@ -170,7 +170,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const pointers = useRef<Map<number, [number, number]>>(new Map());
   const gesture = useRef<{ startDist: number; startMidWorld: [number, number]; startView: View } | null>(null);
-  const [tool, setTool] = useState<Tool>('pen');
+  const [tool, setTool] = useState<Tool>('arrow');
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState(1); // Hairline: thin lines don't hide the candles
   const [err, setErr] = useState('');

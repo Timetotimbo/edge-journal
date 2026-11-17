@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.27.1 — 2026-11-17
+- Mark up chart opens with the Arrow tool selected.
+
 ## 1.27.0 — 2026-11-17
 - Mark up chart: circles take a note too. Drawing one opens "Note for this circle" with the one-tap labels (Enter Long, Enter Short…); the words sit beside the circle in its colour, left of it when there's room, so they never cover what was circled. Tap a circle later to change its note or delete it.
 - Every pop-up in the drawing tool has an ✕ to close it, as well as Skip.
