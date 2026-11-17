@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.22.0 — 2026-11-17
+- News → Earnings is now a weekly board like Earnings Whispers': a column per weekday (today outlined), each company's logo, biggest first, with This week / Next week. A green or red dot marks a beat or miss on EPS once reported.
+- Tap a logo for the company's full name, exchange, sector, market cap, EPS and revenue (estimate, and actual vs estimate once out), and a link to its whisper number on Earnings Whispers.
+
 ## 1.21.0 — 2026-11-17
 - News → Earnings tab: upcoming earnings for the next week with EPS and revenue estimates, and the actuals once reported (green beat, red miss). Each has a Whisper link to its Earnings Whispers page. From FMP's free plan, so big names only and no before-open / after-close times.
 

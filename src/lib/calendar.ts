@@ -18,6 +18,11 @@ export type Earning = {
   epsActual: number | null;
   revenueEstimated: number | null;
   revenueActual: number | null;
+  name?: string | null;
+  image?: string | null;
+  exchange?: string | null;
+  sector?: string | null;
+  marketCap?: number | null;
 };
 
 export type Calendar = { events: NewsEvent[]; earnings: Earning[]; earningsError?: string };
@@ -38,11 +43,11 @@ export async function fetchCalendar(): Promise<Calendar> {
   return cal;
 }
 
-/** $40.2B, $812M: revenue at a glance */
+/** $3.76T, $40.2B, $812M: money at a glance */
 export function bigMoney(n: number | null): string {
   if (n == null) return '–';
   const a = Math.abs(n);
-  return a >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : a >= 1e6 ? `$${Math.round(n / 1e6)}M` : `$${Math.round(n).toLocaleString()}`;
+  return a >= 1e12 ? `$${(n / 1e12).toFixed(2)}T` : a >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : a >= 1e6 ? `$${Math.round(n / 1e6)}M` : `$${Math.round(n).toLocaleString()}`;
 }
 
 export const whisperUrl = (symbol: string) => `https://www.earningswhispers.com/epsdetails/${encodeURIComponent(symbol)}`;
