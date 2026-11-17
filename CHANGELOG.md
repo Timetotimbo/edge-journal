@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.20.1 — 2026-11-17
+- News: when the calendar feed can't be reached, the widget now says so (with the reason) instead of showing an empty week, and a failed fetch is no longer cached for five minutes.
+
 ## 1.20.0 — 2026-11-17
 - Mark up chart: the drawing tools, colours and thicknesses now sit at the top, under Save. At the bottom, Chrome's "To exit full screen…" notice covered them every time the editor opened.
 - Arrow notes and text: one-tap labels — Enter Long, Enter Short, Consolidation, Breakout — so the keyboard doesn't open unless you want to type. Anything you type yourself is remembered as a new label next time (tap its × to remove it).

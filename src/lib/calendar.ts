@@ -16,7 +16,10 @@ let cache: { at: number; events: NewsEvent[] } | null = null;
 export async function fetchCalendar(): Promise<NewsEvent[]> {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.events;
   const res = await fetch('/api/calendar');
-  if (!res.ok) throw new Error('Could not load the news calendar');
+  if (!res.ok) {
+    const why = await res.json().then(b => b?.error).catch(() => '');
+    throw new Error(`Couldn't load the news calendar${why ? `: ${why}` : ''}`);
+  }
   const events: NewsEvent[] = await res.json();
   cache = { at: Date.now(), events };
   return events;
