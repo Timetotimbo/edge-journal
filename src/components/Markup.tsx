@@ -65,6 +65,27 @@ function priceScale(shapes: Shape[]): ((y: number) => number) | null {
 }
 const fmtPrice = (n: number) => (Math.round(n * 4) / 4).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// A shape's note (arrow or circle): smallish, two or three words to a line, so it sits beside the action, not across it
+function noteBlock(g: CanvasRenderingContext2D, s: Shape, W: number, H: number) {
+  const px = Math.max(s.w * 4, Math.max(W, H) / 62), lh = px * 1.15;
+  g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle';
+  const lines: string[] = [];
+  for (const word of (s.text || '').split(/\s+/)) {
+    const last = lines[lines.length - 1];
+    if (last != null && last.split(' ').length < 3 && (last + ' ' + word).length <= 16) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return { px, lh, lines, tw: Math.max(...lines.map(l => g.measureText(l).width)), th: lines.length * lh };
+}
+// x, y: the note's left and top. A dark (or light) edge keeps the words readable on any chart.
+function paintNote(g: CanvasRenderingContext2D, s: Shape, lines: string[], x: number, y: number, tw: number, lh: number, px: number, align: CanvasTextAlign) {
+  g.textAlign = align;
+  const ax = align === 'right' ? x + tw : align === 'center' ? x + tw / 2 : x;
+  g.lineWidth = px / 4; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000'; g.fillStyle = s.color;
+  lines.forEach((l, k) => { const ly = y + lh * (k + 0.5); g.strokeText(l, ax, ly); g.fillText(l, ax, ly); });
+  g.textAlign = 'left';
+}
+
 function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H: number, shapes: Shape[]) {
   g.drawImage(img, 0, 0, W, H);
   const scale = priceScale(shapes);
@@ -84,6 +105,17 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
       g.beginPath();
       g.ellipse((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.max(1, Math.abs(b[0] - a[0]) / 2), Math.max(1, Math.abs(b[1] - a[1]) / 2), 0, 0, Math.PI * 2);
       g.stroke();
+      if (s.text) {
+        // The note sits beside the circle, left of it if there's room (charts run to the right edge), else right,
+        // else above or below, so it never covers what was circled
+        const { px, lines, tw, th, lh } = noteBlock(g, s, W, H), gap = px * 0.5;
+        const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+        let x: number, y = (y0 + y1) / 2 - th / 2, align: CanvasTextAlign;
+        if (x0 - gap - tw >= gap) { x = x0 - gap - tw; align = 'right'; }
+        else if (x1 + gap + tw <= W - gap) { x = x1 + gap; align = 'left'; }
+        else { x = Math.min(W - gap - tw, Math.max(gap, (x0 + x1) / 2 - tw / 2)); y = y0 - gap - th >= gap ? y0 - gap - th : y1 + gap; align = 'center'; }
+        paintNote(g, s, lines, x, Math.min(H - th - gap, Math.max(gap, y)), tw, lh, px, align);
+      }
     }
     else if (s.tool === 'hline') {
       g.beginPath(); g.moveTo(0, a[1]); g.lineTo(W, a[1]); g.stroke();
@@ -114,24 +146,11 @@ function paint(g: CanvasRenderingContext2D, img: CanvasImageSource, W: number, H
           // The arrow's note sits at its tail, out past the end, so the head still points at clear chart
           // (kept inside the picture: an arrow starting near an edge would otherwise push its note off it)
           // Smallish, two or three words to a line, so a note sits beside the action instead of across it
-          const px = Math.max(s.w * 4, Math.max(W, H) / 62), right = b[0] >= a[0], lh = px * 1.15;
-          g.font = `700 ${px}px system-ui, sans-serif`; g.textBaseline = 'middle';
-          const lines: string[] = [];
-          for (const word of s.text.split(/\s+/)) {
-            const last = lines[lines.length - 1];
-            if (last != null && last.split(' ').length < 3 && (last + ' ' + word).length <= 16) lines[lines.length - 1] = `${last} ${word}`;
-            else lines.push(word);
-          }
-          const tw = Math.max(...lines.map(l => g.measureText(l).width)), th = lines.length * lh, gap = px * 0.5;
+          const { px, lines, tw, th, lh } = noteBlock(g, s, W, H), right = b[0] >= a[0], gap = px * 0.5;
           let x = right ? a[0] - gap - tw : a[0] + gap, y = a[1] - th / 2; // block's left and top
           let align: CanvasTextAlign = right ? 'right' : 'left';
           if (x < gap || x + tw > W - gap) { x = Math.min(W - gap - tw, Math.max(gap, a[0] - tw / 2)); y = b[1] <= a[1] ? a[1] + gap : a[1] - gap - th; align = 'center'; }
-          y = Math.min(H - th - gap, Math.max(gap, y));
-          g.textAlign = align;
-          const ax = align === 'right' ? x + tw : align === 'center' ? x + tw / 2 : x;
-          g.lineWidth = px / 4; g.strokeStyle = s.color === '#000000' ? '#ffffff' : '#000000'; g.fillStyle = s.color;
-          lines.forEach((l, k) => { const ly = y + lh * (k + 0.5); g.strokeText(l, ax, ly); g.fillText(l, ax, ly); });
-          g.textAlign = 'left';
+          paintNote(g, s, lines, x, Math.min(H - th - gap, Math.max(gap, y)), tw, lh, px, align);
         }
       }
     }
@@ -153,7 +172,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
   const gesture = useRef<{ startDist: number; startMidWorld: [number, number]; startView: View } | null>(null);
   const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState(COLORS[0]);
-  const [size, setSize] = useState(4);
+  const [size, setSize] = useState(1); // Hairline: thin lines don't hide the candles
   const [err, setErr] = useState('');
   // Full screen: the whole phone screen for the chart, no browser bars
   const root = useRef<HTMLDivElement>(null);
@@ -323,15 +342,14 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         const k = drag.index; // stays put: nothing else can change the list while the box is open
         const patch = (p: Partial<Shape>) => setShapes(list => list.map((x, i) => (i === k ? { ...x, ...p } : x)));
         const remove = () => { setShapes(list => list.filter((_, i) => i !== k)); setAsk(null); };
-        if (sh.tool === 'arrow') {
-          void askFor('Note for this arrow', sh.text || '', { hint: 'Tap one, or type your own.', labels: true, onDelete: remove }).then(said => { if (said != null) patch({ text: said.trim() || undefined }); });
+        if (sh.tool === 'arrow' || sh.tool === 'oval') {
+          void askFor(sh.tool === 'oval' ? 'Note for this circle' : 'Note for this arrow', sh.text || '', { hint: 'Tap one, or type your own.', labels: true, onDelete: remove }).then(said => { if (said != null) patch({ text: said.trim() || undefined }); });
         } else if (sh.tool === 'hline') {
           void askPrice(sh.price, remove).then(n => { if (n !== undefined) patch({ price: n ?? undefined }); });
         } else if (sh.tool === 'text') {
           void askFor('Text', sh.text || '', { labels: true, onDelete: remove }).then(said => { if (said != null) { if (said.trim()) patch({ text: said.trim() }); else remove(); } });
         } else {
-          const name = sh.tool === 'oval' ? 'circle' : sh.tool;
-          void askFor(`This ${name}`, '', { noInput: true, hint: 'Drag it to move it, or delete it.', onDelete: remove });
+          void askFor(`This ${sh.tool}`, '', { noInput: true, hint: 'Drag it to move it, or delete it.', onDelete: remove });
         }
       }
       return;
@@ -342,8 +360,8 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     setShapes(list => [...list, s]);
     const set = (patch: Partial<Shape>) => setShapes(list => list.map(x => (x === s ? { ...x, ...patch } : x)));
     if (s.tool === 'hline' && !priceScale(shapes)) void askPrice().then(n => { if (n != null) set({ price: n }); });
-    // A finished arrow asks for its note right away; Skip or blank leaves it without one (tap it later to add)
-    if (s.tool === 'arrow' && s.pts.length > 1) void askFor('Note for this arrow', '', { hint: 'Tap one, or type your own.', labels: true }).then(t => { if (t?.trim()) set({ text: t.trim() }); });
+    // A finished arrow or circle asks for its note right away; ✕, Skip or blank leaves it without one (tap it later to add)
+    if ((s.tool === 'arrow' || s.tool === 'oval') && s.pts.length > 1) void askFor(s.tool === 'oval' ? 'Note for this circle' : 'Note for this arrow', '', { hint: 'Tap one, or type your own.', labels: true }).then(t => { if (t?.trim()) set({ text: t.trim() }); });
   };
 
   const save = async () => {
@@ -393,7 +411,10 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
       {ask && (
         <div className="absolute inset-0 z-10 bg-black/50 flex items-start justify-center p-4 pt-20" onPointerDown={e => { if (e.target === e.currentTarget) answer(null); }}>
           <form className="w-full max-w-sm rounded-xl bg-neutral-900 border border-white/20 p-4 space-y-3 shadow-2xl" onSubmit={e => { e.preventDefault(); answer(ask.value); }}>
-            <div className="font-semibold">{ask.title}</div>
+            <div className="flex items-start gap-2 -mb-1">
+              <div className="font-semibold flex-1 pt-1">{ask.title}</div>
+              <button type="button" onClick={() => answer(null)} aria-label="Close" className="-mr-2 -mt-1 p-2 text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
             {ask.hint && <p className="text-xs text-white/50 -mt-2">{ask.hint}</p>}
             {ask.labels && (
               <div className="flex flex-wrap gap-2">
