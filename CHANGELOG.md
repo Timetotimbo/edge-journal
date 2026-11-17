@@ -2,6 +2,10 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.20.0 — 2026-11-17
+- Mark up chart: the drawing tools, colours and thicknesses now sit at the top, under Save. At the bottom, Chrome's "To exit full screen…" notice covered them every time the editor opened.
+- Arrow notes and text: one-tap labels — Enter Long, Enter Short, Consolidation, Breakout — so the keyboard doesn't open unless you want to type. Anything you type yourself is remembered as a new label next time (tap its × to remove it).
+
 ## 1.19.2 — 2026-11-17
 - Fixed the News widget's countdown to the next event: it was squeezed into the header row with no room to breathe and could overflow off-screen on a narrow card instead of showing. Now its own banner below the header, ticking live every second (down to seconds once it's close).
 

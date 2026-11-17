@@ -14,6 +14,10 @@ type View = { scale: number; x: number; y: number };
 const TOOLS: [Tool, string, typeof Pencil][] = [['pen', 'Draw', Pencil], ['line', 'Line', Minus], ['hline', 'Price line', SeparatorHorizontal], ['arrow', 'Arrow', ArrowUpRight], ['oval', 'Circle', Circle], ['box', 'Box', Square], ['text', 'Text', Type]];
 const COLORS = ['#ff8a1f', '#22c55e', '#ef4444', '#facc15', '#38bdf8', '#ffffff', '#000000'];
 const SIZES: [number, string][] = [[1, 'Hairline'], [2, 'Thin'], [4, 'Medium'], [7, 'Thick']];
+const LABELS = ['Enter Long', 'Enter Short', 'Consolidation', 'Breakout'];
+const MY_LABELS = 'tj_markup_labels';
+const myLabels = (): string[] => { try { return JSON.parse(localStorage.getItem(MY_LABELS) || '[]'); } catch { return []; } };
+const keepLabels = (l: string[]) => { try { localStorage.setItem(MY_LABELS, JSON.stringify(l)); } catch { /* not remembered */ } };
 const MAX = 2400; // longest side of the saved picture
 const MAX_ZOOM = 6;
 
@@ -166,12 +170,19 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     else void root.current?.requestFullscreen?.().catch(() => setErr("This browser won't go full screen.")); 
   };
   // The app's own text box (the browser's prompt() can be silenced by the phone after a few, and looks out of place)
-  const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; noInput?: boolean; onDelete?: () => void; resolve: (v: string | null) => void } | null>(null);
+  const [ask, setAsk] = useState<{ title: string; hint?: string; value: string; numeric?: boolean; noInput?: boolean; labels?: boolean; onDelete?: () => void; resolve: (v: string | null) => void } | null>(null);
   const askOpen = useRef(false);
   askOpen.current = !!ask;
-  const askFor = (title: string, value = '', more: { hint?: string; numeric?: boolean; noInput?: boolean; onDelete?: () => void } = {}) =>
+  const askFor = (title: string, value = '', more: { hint?: string; numeric?: boolean; noInput?: boolean; labels?: boolean; onDelete?: () => void } = {}) =>
     new Promise<string | null>(resolve => setAsk({ title, value, ...more, resolve }));
-  const answer = (v: string | null) => { ask?.resolve(v); setAsk(null); };
+  // Labels: the built-in ones plus anything typed before, so a common note is one tap and the keyboard never opens
+  const [saved, setSaved] = useState(myLabels);
+  const answer = (v: string | null) => {
+    const t = v?.trim();
+    if (ask?.labels && t && ![...LABELS, ...saved].includes(t)) { const l = [t, ...saved].slice(0, 12); setSaved(l); keepLabels(l); }
+    ask?.resolve(v); setAsk(null);
+  };
+  const forget = (t: string) => { const l = saved.filter(x => x !== t); setSaved(l); keepLabels(l); };
   const [saving, setSaving] = useState(false);
 
   // Load the picture (downloaded first, so drawing it never locks the canvas)
@@ -245,7 +256,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     }
     if (tool === 'text') {
       const shape: Shape = { tool, color, w: width(), pts: [p] };
-      void askFor('Text to add').then(t => { if (t?.trim()) setShapes(s => [...s, { ...shape, text: t.trim() }]); });
+      void askFor('Text to add', '', { labels: true }).then(t => { if (t?.trim()) setShapes(s => [...s, { ...shape, text: t.trim() }]); });
       return;
     }
     live.current = { tool, color, w: width(), pts: [p] };
@@ -313,11 +324,11 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         const patch = (p: Partial<Shape>) => setShapes(list => list.map((x, i) => (i === k ? { ...x, ...p } : x)));
         const remove = () => { setShapes(list => list.filter((_, i) => i !== k)); setAsk(null); };
         if (sh.tool === 'arrow') {
-          void askFor('Note for this arrow', sh.text || '', { hint: 'Leave blank for none.', onDelete: remove }).then(said => { if (said != null) patch({ text: said.trim() || undefined }); });
+          void askFor('Note for this arrow', sh.text || '', { hint: 'Tap one, or type your own.', labels: true, onDelete: remove }).then(said => { if (said != null) patch({ text: said.trim() || undefined }); });
         } else if (sh.tool === 'hline') {
           void askPrice(sh.price, remove).then(n => { if (n !== undefined) patch({ price: n ?? undefined }); });
         } else if (sh.tool === 'text') {
-          void askFor('Text', sh.text || '', { onDelete: remove }).then(said => { if (said != null) { if (said.trim()) patch({ text: said.trim() }); else remove(); } });
+          void askFor('Text', sh.text || '', { labels: true, onDelete: remove }).then(said => { if (said != null) { if (said.trim()) patch({ text: said.trim() }); else remove(); } });
         } else {
           const name = sh.tool === 'oval' ? 'circle' : sh.tool;
           void askFor(`This ${name}`, '', { noInput: true, hint: 'Drag it to move it, or delete it.', onDelete: remove });
@@ -332,7 +343,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
     const set = (patch: Partial<Shape>) => setShapes(list => list.map(x => (x === s ? { ...x, ...patch } : x)));
     if (s.tool === 'hline' && !priceScale(shapes)) void askPrice().then(n => { if (n != null) set({ price: n }); });
     // A finished arrow asks for its note right away; Skip or blank leaves it without one (tap it later to add)
-    if (s.tool === 'arrow' && s.pts.length > 1) void askFor('Note for this arrow', '', { hint: 'Leave blank for none.' }).then(t => { if (t?.trim()) set({ text: t.trim() }); });
+    if (s.tool === 'arrow' && s.pts.length > 1) void askFor('Note for this arrow', '', { hint: 'Tap one, or type your own.', labels: true }).then(t => { if (t?.trim()) set({ text: t.trim() }); });
   };
 
   const save = async () => {
@@ -362,34 +373,7 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
         <button onClick={() => shapes.length && confirm('Erase everything you drew?') && setShapes([])} disabled={!shapes.length} aria-label="Erase all" className="p-2 disabled:opacity-30"><Trash2 className="w-5 h-5" /></button>
         <button onClick={() => void save()} disabled={saving || !dim} className="btn-edge !h-9 !px-4">{saving ? 'Saving…' : 'Save'}</button>
       </div>
-      {err && <p className="px-3 py-1.5 text-sm text-red-400">{err}</p>}
-      {ask && (
-        <div className="absolute inset-0 z-10 bg-black/50 flex items-start justify-center p-4 pt-20" onPointerDown={e => { if (e.target === e.currentTarget) answer(null); }}>
-          <form className="w-full max-w-sm rounded-xl bg-neutral-900 border border-white/20 p-4 space-y-3 shadow-2xl" onSubmit={e => { e.preventDefault(); answer(ask.value); }}>
-            <div className="font-semibold">{ask.title}</div>
-            {ask.hint && <p className="text-xs text-white/50 -mt-2">{ask.hint}</p>}
-            {!ask.noInput && <input autoFocus value={ask.value} onChange={e => setAsk({ ...ask, value: e.target.value })} inputMode={ask.numeric ? 'decimal' : 'text'}
-              onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); answer(null); } }}
-              className="w-full rounded-lg bg-black border border-white/25 px-3 py-2.5 text-base text-white outline-none focus:border-edge" />}
-            <div className="flex justify-end gap-2">
-              {ask.onDelete && <button type="button" onClick={ask.onDelete} className="mr-auto flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 border border-red-500/50"><Trash2 className="w-4 h-4" />Delete</button>}
-              <button type="button" onClick={() => answer(null)} className="rounded-lg px-4 py-2 text-sm text-white/70 border border-white/20">{ask.noInput ? 'Cancel' : 'Skip'}</button>
-              {!ask.noInput && <button type="submit" className="btn-edge !h-9 !px-5">OK</button>}
-            </div>
-          </form>
-        </div>
-      )}
-      {/* Fingers are read on this whole area, not just the chart: a pinch's second finger often lands beside a narrow
-          phone screenshot, and if only the chart listened, the first finger kept drawing stray lines */}
-      <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-hidden relative touch-none select-none"
-        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-        {dim ? <canvas ref={canvas} width={dim[0]} height={dim[1]}
-          className="max-w-full max-h-full rounded touch-none select-none" style={{ cursor: tool === 'text' ? 'text' : 'crosshair' }} />
-          : !err && <span className="text-sm text-white/60">Opening…</span>}
-        {zoomed && <span className="absolute bottom-3 right-3 text-xs bg-black/70 rounded px-1.5 py-0.5 text-white/70">{Math.round(view.scale * 100)}%</span>}
-      </div>
-      <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-white/15 space-y-2">
-        {!full && <p className="text-[11px] text-white/40 -mb-0.5">Two fingers: pinch to zoom, drag to pan</p>}
+      <div className="px-3 py-2 border-b border-white/15 space-y-2">
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {TOOLS.map(([k, label, Icon]) => (
             <button key={k} onClick={() => setTool(k)} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium border shrink-0 ${tool === k ? 'border-edge bg-edge/20 text-edge' : 'border-white/20 text-white/80'}`}><Icon className="w-4 h-4" />{label}</button>
@@ -403,6 +387,43 @@ export default function Markup({ src, onSave, onClose }: { src: Blob | string; o
             ))}
           </div>
         </div>
+        {!full && <p className="text-[11px] text-white/40 -mt-0.5">Two fingers: pinch to zoom, drag to pan</p>}
+      </div>
+      {err && <p className="px-3 py-1.5 text-sm text-red-400">{err}</p>}
+      {ask && (
+        <div className="absolute inset-0 z-10 bg-black/50 flex items-start justify-center p-4 pt-20" onPointerDown={e => { if (e.target === e.currentTarget) answer(null); }}>
+          <form className="w-full max-w-sm rounded-xl bg-neutral-900 border border-white/20 p-4 space-y-3 shadow-2xl" onSubmit={e => { e.preventDefault(); answer(ask.value); }}>
+            <div className="font-semibold">{ask.title}</div>
+            {ask.hint && <p className="text-xs text-white/50 -mt-2">{ask.hint}</p>}
+            {ask.labels && (
+              <div className="flex flex-wrap gap-2">
+                {[...LABELS, ...saved].map(t => (
+                  <span key={t} className="flex items-center rounded-full border border-white/25 bg-white/5">
+                    <button type="button" onClick={() => answer(t)} className="pl-3 pr-3 py-1.5 text-sm font-medium">{t}</button>
+                    {!LABELS.includes(t) && <button type="button" onClick={() => forget(t)} aria-label={`Remove ${t}`} className="-ml-1.5 pr-2.5 py-1.5 text-white/40"><X className="w-3.5 h-3.5" /></button>}
+                  </span>
+                ))}
+              </div>
+            )}
+            {!ask.noInput && <input autoFocus={!ask.labels} placeholder={ask.labels ? 'Or type your own…' : undefined} value={ask.value} onChange={e => setAsk({ ...ask, value: e.target.value })} inputMode={ask.numeric ? 'decimal' : 'text'}
+              onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); answer(null); } }}
+              className="w-full rounded-lg bg-black border border-white/25 px-3 py-2.5 text-base text-white outline-none focus:border-edge" />}
+            <div className="flex justify-end gap-2">
+              {ask.onDelete && <button type="button" onClick={ask.onDelete} className="mr-auto flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 border border-red-500/50"><Trash2 className="w-4 h-4" />Delete</button>}
+              <button type="button" onClick={() => answer(null)} className="rounded-lg px-4 py-2 text-sm text-white/70 border border-white/20">{ask.noInput ? 'Cancel' : 'Skip'}</button>
+              {!ask.noInput && <button type="submit" className="btn-edge !h-9 !px-5">OK</button>}
+            </div>
+          </form>
+        </div>
+      )}
+      {/* Fingers are read on this whole area, not just the chart: a pinch's second finger often lands beside a narrow
+          phone screenshot, and if only the chart listened, the first finger kept drawing stray lines */}
+      <div className="flex-1 min-h-0 flex items-center justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden relative touch-none select-none"
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+        {dim ? <canvas ref={canvas} width={dim[0]} height={dim[1]}
+          className="max-w-full max-h-full rounded touch-none select-none" style={{ cursor: tool === 'text' ? 'text' : 'crosshair' }} />
+          : !err && <span className="text-sm text-white/60">Opening…</span>}
+        {zoomed && <span className="absolute bottom-3 right-3 text-xs bg-black/70 rounded px-1.5 py-0.5 text-white/70">{Math.round(view.scale * 100)}%</span>}
       </div>
     </div>, document.body);
 }
