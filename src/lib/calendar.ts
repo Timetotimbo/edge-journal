@@ -10,22 +10,31 @@ export type NewsEvent = {
   actual?: string;
 };
 
-/** One company's report, from FMP. date is a plain day (no before-open/after-close on FMP's free plan). */
+/** One company's report, from Finnhub. hour: 'bmo' before the open, 'amc' after the close, '' not set. */
 export type Earning = {
   symbol: string;
   date: string;
+  hour: 'bmo' | 'amc' | '';
   epsEstimated: number | null;
   epsActual: number | null;
   revenueEstimated: number | null;
   revenueActual: number | null;
-  name?: string | null;
-  image?: string | null;
-  exchange?: string | null;
-  sector?: string | null;
-  marketCap?: number | null;
+  image: string | null;
 };
 
-export type Calendar = { events: NewsEvent[]; earnings: Earning[]; earningsError?: string };
+/** more: how many smaller companies weren't listed, by "date|hour" */
+export type Calendar = { events: NewsEvent[]; earnings: Earning[]; more: Record<string, number>; earningsError?: string };
+
+export type Profile = { name: string; exchange: string | null; industry: string | null; marketCap: number | null; logo: string | null; web: string | null };
+const profiles = new Map<string, Promise<Profile | null>>();
+/** A company's name and details, looked up when its logo is tapped */
+export function fetchProfile(symbol: string): Promise<Profile | null> {
+  if (!profiles.has(symbol)) {
+    profiles.set(symbol, fetch(`${NEWS}?profile=${encodeURIComponent(symbol)}`).then(r => r.json()).then(b => b?.profile || null)
+      .catch(() => { profiles.delete(symbol); return null; }));
+  }
+  return profiles.get(symbol)!;
+}
 
 let cache: { at: number; cal: Calendar } | null = null;
 
@@ -38,7 +47,7 @@ export async function fetchCalendar(): Promise<Calendar> {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.cal;
   const body = await fetch(NEWS).then(r => r.json()).catch(() => null);
   if (!Array.isArray(body?.events)) throw new Error(`Couldn't load the news calendar${body?.error ? `: ${body.error}` : ''}`);
-  const cal: Calendar = { events: body.events, earnings: Array.isArray(body.earnings) ? body.earnings : [], earningsError: body.earningsError };
+  const cal: Calendar = { events: body.events, earnings: Array.isArray(body.earnings) ? body.earnings : [], more: body.more || {}, earningsError: body.earningsError };
   cache = { at: Date.now(), cal };
   return cal;
 }
