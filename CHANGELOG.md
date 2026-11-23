@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.28.1 — 2026-11-23
+- Dashboard: "Avg hold" is now labeled "Avg hold (mean)" and shows the typical (median) winner hold time alongside it, so it's not confused with the median figure the "Projected P&L" card cuts losers at — a few long-running winners can pull the mean well above the typical trade.
+
 ## 1.28.0 — 2026-11-23
 - Import: Tradovate's own Trade Journal export (Trade Journal tab → Export completed trades) is now recognized, including prop-firm accounts (e.g. TakeProfit Trader). Unlike the Performance report, this one includes commissions.
 

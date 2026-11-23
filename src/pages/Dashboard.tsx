@@ -175,7 +175,8 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
         <Stat all={x(v => money(v.worst, true))} label="Worst trade" value={money(s.worst, true)} cls="text-loss" />
         <Stat all={x(v => `${money(v.high, true)} / ${money(v.low, true)}`)} label="Highest / lowest P&L" value={money(s.high, true)} cls="text-win" sub={`Lowest ${money(s.low, true)} · running total`} />
         <Stat all={x(v => money(v.maxDrawdown))} label="Max drawdown" value={money(s.maxDrawdown)} cls={s.maxDrawdown < 0 ? 'text-loss' : ''} />
-        <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold" value={mins(s.avgHoldMin)} sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}`} />
+        <Stat all={x(v => `${mins(v.avgHoldWin)} W · ${mins(v.avgHoldLoss)} L`)} label="Avg hold (mean)" value={mins(s.avgHoldMin)}
+          sub={`Winners ${mins(s.avgHoldWin)} · losers ${mins(s.avgHoldLoss)}${typWin ? ` · typical (median) winner ${mins(typWin)}` : ''}`} />
         {!!typWin && !!s.losses && (
           <Stat label={`Projected P&L · losers cut at ${mins(typWin)}`} value={whatIf ? money(whatIf.net, true) : '…'} cls={whatIf ? pnlClass(whatIf.net) : 'text-mute'}
             sub={!whatIf ? 'Pricing your losers from the charts…'
