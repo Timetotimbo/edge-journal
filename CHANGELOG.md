@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.28.0 — 2026-11-23
+- Import: Tradovate's own Trade Journal export (Trade Journal tab → Export completed trades) is now recognized, including prop-firm accounts (e.g. TakeProfit Trader). Unlike the Performance report, this one includes commissions.
+
 ## 1.27.1 — 2026-11-17
 - Mark up chart opens with the Arrow tool selected.
 
