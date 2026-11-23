@@ -3,7 +3,7 @@ import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAx
 import type { Trade } from '../lib/types';
 import { tickDollars } from '../lib/instruments';
 import { byKey, dayOf, equityCurve, money, pct, pnlClass, summarize, timed, type Group } from '../lib/stats';
-import { cutLosers, type CutResult } from '../lib/whatif';
+import { cutLosers, timeStop, type CutResult, type StopResult } from '../lib/whatif';
 import { review } from '../lib/review';
 import Calendar from '../components/Calendar';
 import TradeRow from '../components/TradeRow';
@@ -130,6 +130,14 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
     if (typWin && s.losses) void cutLosers(trades, typWin).then(r => { if (!gone) setWhatIf(r); });
     return () => { gone = true; };
   }, [trades, typWin, s.losses]);
+  // The rule you could really follow: at the typical winner's hold, close anything still red — winners included
+  const [stop, setStop] = useState<StopResult | null>(null);
+  useEffect(() => {
+    let gone = false;
+    setStop(null);
+    if (typWin && s.count) void timeStop(trades, typWin).then(r => { if (!gone) setStop(r); });
+    return () => { gone = true; };
+  }, [trades, typWin, s.count]);
   const weekday = useMemo(() => {
     const g = Object.fromEntries(byKey(trades, t => String(new Date(t.entry_at).getDay())).map(x => [x.key, x.net]));
     return [1, 2, 3, 4, 5].map(d => ({ name: DAYS[d], net: g[d] || 0 }));
@@ -182,6 +190,12 @@ export default function Dashboard({ trades, anyAdds, scope, onAdds, everyKind, p
             sub={!whatIf ? 'Pricing your losers from the charts…'
               : !whatIf.cut ? `No losers could be re-priced${whatIf.missing ? ` (${whatIf.missing} ran longer but have no chart data)` : ' (none ran longer than your winners)'}`
               : `${usd(whatIf.delta)} vs actual · ${whatIf.cut} losers closed at your typical winner's hold, ${whatIf.better} came out better${whatIf.missing ? ` · ${whatIf.missing} more have no chart data` : ''}`} />
+        )}
+        {!!typWin && (
+          <Stat label={`Timed stop · close if red at ${mins(typWin)}`} value={stop ? money(stop.net, true) : '…'} cls={stop ? pnlClass(stop.net) : 'text-mute'}
+            sub={!stop ? 'Pricing from the charts…'
+              : !stop.cut ? `Nothing to close${stop.missing ? ` (${stop.missing} ran longer but have no chart data)` : ' (nothing was still open and red at that point)'}`
+              : `${usd(stop.delta)} vs actual · ${stop.losers} losers cut, ${stop.winners} winners cut short (gave up ${money(stop.winnersGaveUp)})${stop.missing ? ` · ${stop.missing} more have no chart data` : ''}`} />
         )}
         <Stat all={x(v => `${tick$(v.avgTickWin)} W · ${tick$(v.avgTickLoss)} L`)} label="Avg size ($ per tick)" value={`${tick$(s.avgTick)}/tick`} sub={`Winners ${tick$(s.avgTickWin)} · losers ${tick$(s.avgTickLoss)}`} />
         <Stat all={x(v => `${Math.round(v.netTicks).toLocaleString()} ticks`)} label="Net edge (ticks)" value={`${Math.round(s.netTicks).toLocaleString()} ticks`} cls={pnlClass(s.netTicks)}

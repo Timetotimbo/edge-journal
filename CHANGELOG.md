@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.30.0 — 2026-11-23
+- New Dashboard card: "Timed stop" — what your net P&L would be if every trade still open and red at your typical winner's hold (not just losers that ran long) had been closed right there, priced from the 1-minute charts. This was already computed year-by-year on the Progress page; now it's on the Dashboard too, next to "Projected P&L."
+
 ## 1.29.0 — 2026-11-23
 - New "All instruments" filter dropdown (Dashboard, Trades, Progress), next to the account filter — scope everything down to one instrument (MES, MNQ, NQ…). The existing "By instrument" breakdown table on the Dashboard already compared them side by side.
 
