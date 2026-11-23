@@ -52,6 +52,7 @@ export function parseFile(text: string, fileName = ''): Parsed {
   const { data, meta } = Papa.parse<Record<string, string>>(clean, { header: true, skipEmptyLines: true, transformHeader: h => h.trim() });
   const cols = (meta.fields || []).map(f => f.toLowerCase());
   const has = (...c: string[]) => c.every(x => cols.includes(x));
+  if (has('tradeid', 'tradeaccount', 'entrydate', 'exitdate', 'pnldollars')) return tradovateJournal(data);
   if (has('market pos.', 'entry price', 'exit price')) return nt8Trades(data);
   if (has('instrument', 'action', 'quantity', 'price', 'time')) return nt8Executions(data);
   if (has('buyprice', 'sellprice', 'boughttimestamp')) return tradovatePerformance(data);
@@ -107,6 +108,28 @@ function nt8Executions(rows: Record<string, string>[]): Parsed {
     }, pick(r, 'Instrument'));
   });
   return { format: 'NinjaTrader 8 · Executions', fills, warnings: [] };
+}
+
+// ---- Tradovate (incl. prop firms like TakeProfit Trader): built-in Trade Journal, Export completed trades ----
+// One row per closed round-trip, net P&L (commission already subtracted) and its own commission column.
+function tradovateJournal(rows: Record<string, string>[]): Parsed {
+  const fills: Fill[] = [];
+  let seq = 0;
+  for (const r of rows) {
+    const symbol = pick(r, 'symbol');
+    const qty = num(pick(r, 'maxQuantity'));
+    if (!symbol || isNaN(qty) || qty === 0) continue;
+    const dir = /^s/i.test(pick(r, 'position')) ? -1 : 1;
+    const entry = num(pick(r, 'entryPrice')), exit = num(pick(r, 'exitPrice'));
+    const comm = num(pick(r, 'commission')) || 0;
+    const net = num(pick(r, 'pnlDollars'));
+    const gross = net + comm;
+    const inferred = exit !== entry ? Math.abs(gross / ((exit - entry) * qty)) : undefined;
+    const base = { broker: 'Tradovate', account: pick(r, 'tradeAccount') || 'Tradovate', fees: 0 };
+    fills.push(futureFill({ ...base, at: parseDate(pick(r, 'entryDate')), seq: seq++, qty: dir * qty, price: entry }, symbol, inferred));
+    fills.push(futureFill({ ...base, at: parseDate(pick(r, 'exitDate')), seq: seq++, qty: -dir * qty, price: exit, fees: comm }, symbol, inferred));
+  }
+  return { format: 'Tradovate · Trade Journal', fills, warnings: [] };
 }
 
 // ---- Tradovate: Reports → Performance → Download (one row per buy/sell pair, P&L before fees) ----

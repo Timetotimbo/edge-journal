@@ -15,7 +15,7 @@ const HOW: [string, string[]][] = [
     'Open the Trades tab (or Executions), right-click the grid → Export… → save as CSV.',
     'Upload that file here. Trades include MAE/MFE and commissions.',
   ]],
-  ['Tradovate', ['Reports → Performance (or Orders → Fills) → pick dates → Download CSV.', 'The Performance report leaves out commissions.']],
+  ['Tradovate', ['Reports → Performance (or Orders → Fills) → pick dates → Download CSV.', 'The Performance report leaves out commissions.', 'Or the Trade Journal tab → Export completed trades — this one includes commissions, and works for prop-firm accounts (e.g. TakeProfit Trader) too.']],
   ['Robinhood', ['Account → Reports and statements → Reports → Generate a report (Account activity, CSV).', 'Robinhood emails it; upload the CSV here. It has dates but no times.']],
   ['thinkorswim', ['Monitor → Account Statement → pick dates → the menu (☰) at top right → Export to File.', 'The journal reads its “Account Trade History” section.']],
   ['Schwab (website)', ['Accounts → History → Transactions → Export → CSV.']],
