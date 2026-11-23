@@ -79,8 +79,9 @@ export default function App() {
   const years = useMemo(() => yearRanges(j.trades || []), [j.trades]);
   // Every date with the other filters, for the Progress page's year-by-year table
   const every = useMemo(() => applyFilters(j.trades || [], { ...filters, range: 'all' }), [j.trades, filters]);
-  const scope = [filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), rangeLabel(filters).toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ');
+  const scope = [filters.kind ? KINDS.find(k => k[0] === filters.kind)?.[1] : 'all account types', filters.account || (filters.kind ? '' : 'all accounts'), filters.instrument, rangeLabel(filters).toLowerCase(), filters.side ? `${filters.side} only` : ''].filter(Boolean).join(' · ');
   const accounts = useMemo(() => [...new Set((j.trades || []).map(t => t.account || t.broker))].sort(), [j.trades]);
+  const instruments = useMemo(() => [...new Set((j.trades || []).map(t => t.root))].sort(), [j.trades]);
 
   if (session === undefined) return null;
   if (!session) return <Login />;
@@ -142,6 +143,12 @@ export default function App() {
             <select className="field !w-auto !h-9" value={filters.asset} onChange={e => setFilters({ ...filters, asset: e.target.value })}>
               <option value="">Futures & options</option><option value="future">Futures</option><option value="option">Options</option><option value="stock">Stocks</option>
             </select>
+            {instruments.length > 1 && (
+              <select className="field !w-auto !h-9" value={filters.instrument || ''} onChange={e => setFilters({ ...filters, instrument: e.target.value })}>
+                <option value="">All instruments</option>
+                {instruments.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
+            )}
             <select className="field !w-auto !h-9" value={filters.side} onChange={e => setFilters({ ...filters, side: e.target.value })}>
               <option value="">Long & short</option><option value="long">Long</option><option value="short">Short</option>
             </select>

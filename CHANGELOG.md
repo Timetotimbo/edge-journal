@@ -2,6 +2,9 @@
 
 Every version is tagged vX.Y.Z on GitHub, and every deploy is tagged deploy-<date>-<time>.
 
+## 1.29.0 — 2026-11-23
+- New "All instruments" filter dropdown (Dashboard, Trades, Progress), next to the account filter — scope everything down to one instrument (MES, MNQ, NQ…). The existing "By instrument" breakdown table on the Dashboard already compared them side by side.
+
 ## 1.28.1 — 2026-11-23
 - Dashboard: "Avg hold" is now labeled "Avg hold (mean)" and shows the typical (median) winner hold time alongside it, so it's not confused with the median figure the "Projected P&L" card cuts losers at — a few long-running winners can pull the mean well above the typical trade.
 
